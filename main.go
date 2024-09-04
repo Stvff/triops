@@ -128,7 +128,7 @@ func main() {
 			old_index := set.index
 			parse_variable_decl(&set, &global_scope)
 			if set.index == old_index {
-				print_error_line("Unknown type for global decleration", &set)
+				print_error_line("Unknown type for global declaration", &set)
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
 		default:

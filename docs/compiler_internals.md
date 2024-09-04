@@ -1,4 +1,4 @@
-# Compiler internals
+# Compiler internals (unfinished)
 For the compiler, I wanted to minimize amount of seperately allocated regions in memory, and to maximise the usage of that memory.
 This is for a couple intended effects:
 - Reducing the load (and reliance) on go's garbage collector
@@ -18,7 +18,7 @@ decls map[string]Decl_Des
 ```
 First, the type description struct was:
 ```go
-type Type_Des struct{
+type Type_Des struct {
 	name string
 	element_size, element_amount int
 }
@@ -28,7 +28,7 @@ Since `name` was used to index the `types` map, that value is duplicated.
 
 Then, the variable declaration description:
 ```go
-type Decl_Des struct{
+type Decl_Des struct {
 	name string
 	amount []int
 	typ Type_Des
@@ -41,7 +41,7 @@ The dimensions of this struct are `8 by 13`, so 104 bytes. There's no padding, b
 On top of that, since `amount` is an array, every variable declaration will have an extra (almost never more than 4 elements long) array flying around in memory.
 In fact, the `Value` struct:
 ```go
-type Value struct{
+type Value struct {
 	v []byte
 	value_type int
 }
@@ -50,7 +50,7 @@ Contains another dynamic array, which is also usually a small set of elements.
 
 Continuing at the enum definition struct, we can see that that too could not have any indirection. Enums were limited to 'bare types'
 ```go
-type Enum_Des struct{
+type Enum_Des struct {
 	name string
 	typ Type_Des
 	values map[string]Value
@@ -62,4 +62,18 @@ Lastly, I should mention that there was no real Token type. Tokens were `[]rune`
 ended up becoming very unwieldy.
 
 ## Thinking about types
-The main thing that was bothering me was the typesystem
+The main thing that was bothering me was the typesystem. I wanted indirections to be attached to the type, not only variables. That, and the fact that I was constantly littering
+my small arrays all over memory, made me extremely unhappy.\
+I briefly considered limiting the amount of indirections to 4 (because honestly, have you ever seen someone use more than 4 levels in declaration?), and making it a static array
+on the type struct:
+```go
+type Type_Des struct {
+	name string
+	element_size, element_amount int
+	indirection [4]int
+}
+```
+However, now my types are all always `4 by 8` (twice as large!), and this hasn't solved another problem:
+if we want to declare a variable with an indirection, what should that type's name be? Should we hash it along with its dimensions and indirections?
+
+In other words, that wouldn't cut it.
