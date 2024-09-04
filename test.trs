@@ -1,0 +1,43 @@
+type A is 1 by 2;
+type B is 2 by 4 bytes; ## `bytes` is optional
+type C is B;
+type D is A[2];
+
+type E is B[0];
+type F is D[];
+
+enum A a_s {a, b, c, d};
+enum B b_s {a, b, c, d};
+
+A a = 4;
+B[3] b = {b_s.c, b_s.d, b_s.a};
+D[] d = {{a_s.a, a_s.b}, {a_s.c, a_s.d}};
+D[][0] e = {d};
+F[0] f = {d};
+##e = f;
+
+enum B numbers {eight = 8, four = 4, one = 1};
+
+type string is 8 bytes;
+
+type int is 4 bytes #intform;
+type char is 1 bytes;
+
+enum int syscalls {write = 1, exit = 60};
+enum int stdout = 1;
+
+char[] msg = "Hewwoo >.<\n";
+
+## this program says hello using linux syscalls
+
+entry asm {
+	mov #reg rax, syscalls.write;
+	mov #reg rdi, stdout;
+	mov #reg rsi, msg[0];
+	mov #reg rdx, msg[1];
+	syscall;
+
+	mov #reg rax, syscalls.exit;
+	mov #reg rdi, 0; ## success
+	syscall;
+}

@@ -1,0 +1,181 @@
+/*
+import
+infix postfix prefix prec asm insert
+type by struct enum any
+for in break continue if return defer
+:;(){}.,"^[]
+=
+#
+/* numbers, strings, arrays */
+
+a decl is
+type_name <any set of []^> variable_name
+
+type type_name: nr <by nr>;
+struct struct_name {
+	decls,
+}
+enum <type_name> {
+	names expression,
+}
+'infix/postfix/prefix' <(decls)> function_name <(decls)> <prec nr> <code block>;
+decl <expression>;
+defer <code block>;
+if boolean_expression <do/code block>;
+for variable_name in 'array_name/nr..nr' <do/code block>;
+return <values>;
+break;
+continue;
+
+enum resolve_type verify_name = constant;
+enum resolve_type verify_name {half_verify_name = constants}
+
+block:
+{statements/blocks}
+statements:
+	resolve_type verify_name = type_checked_expression;
+	resolve_name optional_index = type_checked_expression;
+	expression;
+
+#*
+	all_bare_types is {
+		{"A", 1 by 2}
+		{"B", 2 by 4}
+		{"C", 2 by 4}
+	}
+	all_indirect_types is {
+		{"D", STARRAY, i = 0}
+		{"E", POINTER, i = 0}
+		{"F", RTARRAY, i = 0}
+	}
+
+	starray_types is {
+		{BARE, i = 0, size = 2} D
+		{BARE, i = 1, size = 3} b
+	}
+	rtarray_types is {
+		{STARRAY, i = 0} D
+		{INDIRECT, i = 0} d
+		{INDIRECT, i = 0} e
+	}
+	pointer_types is {
+		{BARE, i = 1} E
+		{RTARRAY, i = 2} e
+		{INDIRECT, i = 2} f
+	}
+	struct_types is {
+		empty lol
+	}
+
+	map_types is {
+		"A" : {BARE, i = 0}
+		"B" : {BARE, i = 1}
+		"C" : {BARE, i = 3}
+		"D" : {INDIRECT, i = 0}
+		"E" : {INDIRECT, i = 1}
+		"F" : {INDIRECT, i = 3}
+	}
+
+	decls is {
+		{"a", typ = {BARE, i = 0}, value_i = 0, value_len = 2}
+		{"b", typ = {STARRAY, i = 1}, value_i = 2, value_len = 3*4*2}
+		{"d", typ = {RTARRAY, i = 1}, value_i = 26, value_len = 2*2*2}
+		{"e", typ = {POINTER, i = 1}, value_i = 34, value_len = 0}
+		{"f", typ = {POINTER, i = 2}, value_i = 34, value_len = 0}
+	}
+
+	values is {
+		4,
+		0,0, 0,0, 0,0, 0,2 , 0,0, 0,0, 0,0, 0,3 ,  0,0, 0,0, 0,0, 0,1,
+		
+	}
+
+*#
+
+*/
+
+type i64: 8;
+type f32: 4;
+
+type string: 8 by 2;
+struct slice {
+	i64 len,
+	byte^ ptr
+}
+
+prefix (int) seven insert return 7;
+
+postfix (slice slc) as_slice (string str) asm {
+	mov slc.ptr, str[0];
+	mov slc.len, str[1];
+}
+
+postfix (string str) as_string (slice slc) asm {
+	mov str[0], slc.ptr;
+	mov str[1], slc.len;
+}
+
+infix (string) append (string left, string right) {
+	return (append (string as_slice), (string as_slice)) as_string;
+}
+
+prefix (slice) append (slice left, slice right) {
+	i64 new_len = left.len + right.len;
+	byte^ new_buffer = clib.alloc new_len;
+	copy slice{new_len, new_buffer}, left;
+	copy slice{right_len, new_buffer + left_len}, right;
+	return slice{new_len, new_buffer};
+}
+
+infix (i64 res) + (i64 a, i64 b) asm {
+	mov res, a;
+	addi res, b;
+}
+
+prefix (i64 c) add (i64 a, i64 b) insert {
+	c = a + b;
+}
+
+infix (f32 f) as (i64 n) asm {
+	ftoint f, n;
+}
+
+struct vec2 {
+	f32 x,
+	f32 y
+}
+
+type string: 16;
+
+postfix (bool) is_file (path name) {
+	bool result = bin.some_executable_that_says_if_a_path_points_to_a_file name;
+	return result;
+}
+
+prefix (string) some_program (string[] inputs) prec 10
+	insert execute /"path"/"to"/"program" inputs;
+
+prefix (string) print_dir (path directory) {
+	path[] contents = bin.ls directory;
+	string total_dir;
+	for name in contents {
+		string output;
+		if name is_file {
+			output = os_path.cat name
+		}
+		if file_name is_directory {
+			output = print_dir name;
+		}
+		total_dir = total_dir concatenate output;
+	}
+	return total_dir;
+}
+
+infix (path final) / (path left, path right) {
+	final.dirs append left.dirs;
+	final.dirs append right.dirs;
+}
+
+struct path {
+	string[] dirs;
+}
