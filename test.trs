@@ -32,7 +32,7 @@ char[] msg = "Hewwoo >.<\n";
 
 ## this program says hello using linux syscalls
 
-entry asm {
+entry {
 	mov #reg rax, syscalls.write;
 	mov #reg rdi, stdout;
 	mov #reg rsi, msg[0];
