@@ -50,6 +50,7 @@ type Type_Des_Pointer struct{
 type Type_Des_Struct struct{
 	name string
 	decls []Decl_Des
+	the names of all these decls have to be allocated in a continuous buffer, similar to how Value and Token_Set is done
 }
 */
 

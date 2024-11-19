@@ -77,3 +77,8 @@ However, now my types are all always `4 by 8` (twice as large!), and this hasn't
 if we want to declare a variable with an indirection, what should that type's name be? Should we hash it along with its dimensions and indirections?
 
 In other words, that wouldn't cut it.
+
+We'll ignore any overly academic typetheory, but when we look at what a semi-capable typesystem is, it's essentially a tree, with a limited set of kinds of branches.
+In this tree, root nodes are your basic types, and the 'kinds of branches' would be something like an array subtype, a pointer subtype, or just, a renaming of a previous type.
+
+The way I chose to implement this behaviour is by having a set of lists with each different type of branched node.

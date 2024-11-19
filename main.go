@@ -131,6 +131,8 @@ func main() {
 				print_error_line("Unknown type for global declaration", &set)
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
+		case KEYWORD_ENTRY:
+//			parse_asm_block()
 		default:
 			print_error_line("default", &set)
 			skip_statement(&set)

@@ -1,3 +1,4 @@
+#*
 type A is 1 by 2;
 type B is 2 by 4 bytes; ## `bytes` is optional
 type C is B;
@@ -17,6 +18,7 @@ F[0] f = {d};
 ##e = f;
 
 enum B numbers {eight = 8, four = 4, one = 1};
+*#
 
 type string is 8 bytes;
 
