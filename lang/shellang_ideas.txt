@@ -179,3 +179,52 @@ infix (path final) / (path left, path right) {
 struct path {
 	string[] dirs;
 }
+
+op (Path final) (Path left) / (Path right) {
+	final.dirs append left.dirs;
+	final.dirs append right.dirs;
+}
+
+alternative idea for the
+(prefix infix suffix is a bit more verbose than need when you're primarily using one of them)
+	op (<input>) (<left args>) <op_name> (<right args>)
+
+However the question becomes, how do you destinguish these?
+	op (<input>) <op_name> (<right args>)
+	op (<left args>) <op_name> (<right args>)
+Possible solution:
+	op (<input>) () <op_name> (<right args>)
+	op () (<left args>) <op_name> (<right args>)
+But also, I kind of want to limit infix operations to just one left and one right operator
+Same with suffix, it should really just be 1 value on the left, I think
+
+sum_all 3 + 3 - 2, 32 * 32, 429 - 0 ^ 2, 21 / 42 / 5 + 6 sum_all
+
+1o04 v 1o11 v 1o11 v, v 1o11 v, v 1o11 v 1o11 v, v 1o11 v 1o11 v 1o11 v 1o40
+
+(1o40 <- error, not enough arguments!
+	(1o04
+		(1011
+			v
+			(1011
+				v
+				v
+			)
+		)
+		(1011
+			v
+			v
+		)
+		(1011
+			v
+			(1011
+				v
+				(1011
+					v
+					v
+				)
+			)
+		)
+	)
+)
+

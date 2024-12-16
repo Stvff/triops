@@ -106,6 +106,9 @@ func main() {
 		types : make(map[string]Type_Index),
 		enums : make(map[string]Enum_Des),
 		decls : make(map[string]Decl_Des),
+		assembly : Asm_Block{
+			label_defs : make(map[string]int),
+		},
 	}
 	set := Token_Set {
 		index : 0,
@@ -113,32 +116,36 @@ func main() {
 		tokens : tokens,
 	}
 //	ggscope = &global_scope
+	error_count := 0
 	for ; !set.end ; inc(&set) {
 		token := set.tokens[set.index]
 //		fmt.Println(token_txt_str(token, full_text))
 		switch token.tag {
 		case KEYWORD_TYPE:
 			inc(&set)
-			parse_type_decl(&set, &global_scope)
+			if !parse_type_decl(&set, &global_scope) { error_count += 1 }
 		case KEYWORD_ENUM:
 			inc(&set)
-			parse_enum_decl(&set, &global_scope)
+			if !parse_enum_decl(&set, &global_scope) { error_count += 1 }
 		case KEYWORD_SEMICOLON:
 		case NONE:
 			old_index := set.index
-			parse_variable_decl(&set, &global_scope)
+			if !parse_variable_decl(&set, &global_scope) { error_count += 1 }
 			if set.index == old_index {
 				print_error_line("Unknown type for global declaration", &set)
+				error_count += 1
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
+		case KEYWORD_ASM: fallthrough
 		case KEYWORD_ENTRY:
-			parse_asm_block(&set, &global_scope)
+			if !parse_asm(&set, &global_scope) { error_count += 1 }
 		default:
 			print_error_line("default", &set)
 			skip_statement(&set)
+			error_count += 1
 		}
 	}
-	fmt.Println()
+/*	fmt.Println()
 	for _, typ := range bare_types { fmt.Println(typ) }
 	for _, typ := range indirect_types { fmt.Println(typ) }
 	fmt.Println()
@@ -147,6 +154,12 @@ func main() {
 	fmt.Println()
 	for name, decl := range global_scope.decls { fmt.Println(name, decl) }
 	fmt.Println(all_values)
+*/
+	if error_count == 0 {
+		generate_assembly(&global_scope, &set)
+	} else {
+		fmt.Printf("Amount of errors: %v\n", error_count)
+	}
 }
 
 //var ggscope *Scope

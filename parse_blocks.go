@@ -1,10 +1,159 @@
 package main
 
-/* this returns a set of (configurable) instructions */
-func parse_asm_block(set *Token_Set, scope *Scope) bool {
-	return finish_block(set)
-}
 
-func finish_block(set *Token_Set) bool {
-	return skip_statement(set)
+func parse_asm(set *Token_Set, scope *Scope) bool {
+	inc(set)
+	single_statement := false
+	if curr(set).tag != KEYWORD_OPEN_BRACE {
+		single_statement = true
+	} else { inc(set) }
+	ok := true
+
+	statloop: for ; !set.end ; inc(set) {
+//		print_error_line("where are we", set)
+		token := curr(set)
+
+		/* special cases */
+		switch token.tag {
+		case DIRECTIVE_LBL:
+			inc(set)
+			if _, exists := scope.assembly.label_defs[token_str(set)]; exists {
+				ok = false
+				/* TODO: print where the label was defined */
+				print_error_line("This label already exists", set)
+				skip_statement(set)
+				if single_statement { break statloop } else { continue statloop }
+			}
+			scope.assembly.label_defs[token_str(set)] = len(scope.assembly.instructions)
+			ok = finish_statement(set)
+			if single_statement { break statloop } else { continue statloop }
+		case KEYWORD_CLOSE_BRACE: break statloop
+		}
+
+		/* produce instruction */
+		var instruction Asm_Instruction
+		/* TODO: check more thoroughly if the mnemonic and registers, labels etc are usable names */
+		instruction.mnemonic = curr(set)
+		inc(set)
+		arg_nr := 0
+		alignment_of_instruction := 0
+		for ; !set.end ; inc(set) { /* argument loop */
+			if curr(set).tag == KEYWORD_SEMICOLON { break }
+//			print_error_line("prog", set)
+			token = curr(set)
+			switch token.tag {
+
+			/* indexing */
+			case KEYWORD_OPEN_BRACKET:
+				inc(set)
+				offset, exists := resolve_integer(set, scope)
+				if !exists { ok = false; if single_statement { break statloop } else { continue statloop } }
+				instruction.args[arg_nr].immediate = integer_to_value(offset)
+				inc(set)
+				if curr(set).tag != KEYWORD_CLOSE_BRACKET {
+					ok = false
+					print_error_line("Missing closing bracket", set)
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+
+			/* a label as argument */
+			case DIRECTIVE_LBL:
+				inc(set)
+				scope.assembly.label_uses = append(scope.assembly.label_uses, len(scope.assembly.instructions))
+
+			/* a register as argument */
+			case DIRECTIVE_REG_BYTE, DIRECTIVE_REG_WORD, DIRECTIVE_REG_DOUB, DIRECTIVE_REG_QUAD, DIRECTIVE_REG_OCTO:
+				reg_alignments := [5]int{1, 2, 4, 8, 16}
+				reg_nr := token.tag - DIRECTIVE_REG_BYTE
+				reg_alignment := reg_alignments[reg_nr]
+				if arg_nr == 0 {
+					alignment_of_instruction = reg_alignment
+				} else {
+					ok = false
+					print_error_line("This register does not have the alignment expected in its context", set)
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+				inc(set)
+				if curr(set).tag != NONE {
+					ok = false
+					print_error_line("Register must not be a keyword or value", set)
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+				instruction.args[arg_nr].verbatim = curr(set)
+				instruction.args[arg_nr].verbatim.tag = token.tag
+
+			/* comma */
+			case KEYWORD_COMMA:
+				arg_nr += 1
+				if arg_nr >= 3 {
+					ok = false
+					print_error_line("The maximum amount of arguments for assembly instructions is 3", set)
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+
+			/* Values of some kind (only integers are supported rn) */
+			case VALUE_INTEGER:
+				integer, exists := resolve_integer(set, scope)
+				if !exists {
+					ok = false
+					print_error_line("Malformed integer (somehow)", set)
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+				instruction.args[arg_nr].immediate = integer_to_value(integer)
+
+			/* Variable or enum */
+			case NONE:
+				decl, dexists := scope.decls[token_str(set)]
+				if dexists {
+					if arg_nr == 0 {
+						alignment_of_instruction = align_of_type(decl.typ)
+					} else if align_of_type(decl.typ) != alignment_of_instruction {
+						ok = false
+						print_error_line("This variable does not have the alignment expected in its context", set)
+						skip_statement(set)
+						if single_statement { break statloop } else { continue statloop }
+					}
+					instruction.args[arg_nr].verbatim = curr(set)
+				} else {
+					old_index := set.index
+					value, enum_typ, vexists := resolve_enum_value(set, scope)
+					if vexists && align_of_type(enum_typ) != alignment_of_instruction {
+						ok = false
+						print_error_line("Enum value does not have the alignment expected in its context", set)
+						skip_statement(set)
+						if single_statement { break statloop } else { continue statloop }
+					} else if !vexists && old_index == set.index {
+						ok = false
+						print_error_line("Enum or variable was not defined", set)
+						skip_statement(set)
+						if single_statement { break statloop } else { continue statloop }
+					} else if !vexists {
+						ok = false
+						print_error_line("Unknown enum subvalue (delete this if it doubles up)", set)
+						skip_statement(set)
+						if single_statement { break statloop } else { continue statloop }
+					}
+					instruction.args[arg_nr].immediate = value
+				}
+
+			default:
+				ok = false
+				print_error_line("Keyword, enum, variable or value was not defined or recognized", set)
+				skip_statement(set)
+				if single_statement { break statloop } else { continue statloop }
+			} /* argument switchcase */
+
+		} /* argument loop */
+
+		instruction.alignment = alignment_of_instruction
+		scope.assembly.instructions = append(scope.assembly.instructions, instruction)
+
+		if single_statement { break statloop }
+	} /* statement loop */
+	return ok
 }

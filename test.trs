@@ -13,33 +13,54 @@ enum B b_s {a, b, c, d};
 A a = 4;
 B[3] b = {b_s.c, b_s.d, b_s.a};
 D[] d = {{a_s.a, a_s.b}, {a_s.c, a_s.d}};
-D[][0] e = {d};
-F[0] f = {d};
+##D[][0] e = {d};
+##F[0] f = {d};
 ##e = f;
 
 enum B numbers {eight = 8, four = 4, one = 1};
-*#
 
 type string is 8 bytes;
+*#
 
-type int is 4 bytes #intform;
+type int is 8 bytes #intform;
 type char is 1 bytes;
 
 enum int syscalls {write = 1, exit = 60};
 enum int stdout = 1;
 
-char[] msg = "Hewwoo >.<\n";
+char[] greeting = "Hewwoo >.<\n";
+int var = stdout;
+
+int[][2][][3] big = {
+	{
+		{{1, 2, 3, 4}, {5, 6, 7}},
+		{{10, 20, 30, 40}, {50, 60, 70}},
+		{{11, 21, 31, 41}, {51, 61, 71}},
+		{{12, 22, 32, 42}, {52, 62, 72}}
+	},
+	{
+		{{13, 23, 33, 43}, {53, 63, 73}},
+		{{14, 24, 34, 44}, {54, 64, 74}},
+		{{15, 25, 35, 45}, {55, 65, 75}},
+		{{16, 26, 36, 46}, {56, 66, 76}},
+		{{17, 27, 37, 47}, {57, 67, 77}}
+	},
+	{
+		{{18, 28, 38, 48}, {58, 68, 78}},
+		{{19, 29, 39, 49}, {59, 69, 79}},
+		{{100, 200, 300, 400}, {500, 600, 700}}
+	}
+};
 
 ## this program says hello using linux syscalls
 
 entry {
-	mov #reg rax, syscalls.write;
-	mov #reg rdi, stdout;
-	mov #reg rsi, msg[0];
-	mov #reg rdx, msg[1];
+	mov #rq rax, syscalls.write;
+	mov #rq rdi, stdout;
+	mov #rq rsi, greeting[0];
+	mov #rq rdx, greeting[1];
 	syscall;
+	add var[0], 1;
 
-	mov #reg rax, syscalls.exit;
-	mov #reg rdi, 0; ## success
-	syscall;
+	## Triops handles the exit
 }

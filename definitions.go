@@ -1,11 +1,30 @@
 package main
 
 type Scope struct {
+//	prev_scope *Scope
 	types map[string]Type_Index
 	enums map[string]Enum_Des
 	decls map[string]Decl_Des
 //	imports map[string]*Scope
-//	prev_scope *Scope
+	assembly Asm_Block
+}
+
+type Asm_Block struct {
+	instructions []Asm_Instruction
+	label_defs map[string]int
+	label_uses []int
+}
+
+/* this'd be sized [4][8]byte */
+type Asm_Arg struct {
+	verbatim Token
+	immediate Value
+}
+
+type Asm_Instruction struct {
+	mnemonic Token
+	alignment int
+	args [3]Asm_Arg
 }
 
 var global_enum_id int = 0
@@ -75,7 +94,12 @@ var keywords = map[string]Token_Tag {
 	"#floatform"  : DIRECTIVE_FLOATFORM,
 	"#stringform" : DIRECTIVE_STRINGFORM,
 
-	"#reg" : DIRECTIVE_REG,
+	"#rb" : DIRECTIVE_REG_BYTE,
+	"#rw" : DIRECTIVE_REG_WORD,
+	"#rd" : DIRECTIVE_REG_DOUB,
+	"#rq" : DIRECTIVE_REG_QUAD,
+	"#ro" : DIRECTIVE_REG_OCTO,
+
 	"#lbl" : DIRECTIVE_LBL,
 
 	"#type"      : DIRECTIVE_TYPE,
@@ -138,7 +162,14 @@ const (
 		DIRECTIVE_STRINGFORM
 		DIRECTIVE_BYTEFORM
 
-		DIRECTIVE_REG
+		DIRECTIVE_REGS_START
+			DIRECTIVE_REG_BYTE
+			DIRECTIVE_REG_WORD
+			DIRECTIVE_REG_DOUB
+			DIRECTIVE_REG_QUAD
+			DIRECTIVE_REG_OCTO
+		DIRECTIVE_REGS_END
+
 		DIRECTIVE_LBL
 
 		DIRECTIVE_TYPE

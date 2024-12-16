@@ -46,8 +46,9 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 			for curr(set).tag != KEYWORD_CLOSE_BRACE && !set.end {
 				inc(set)
 				_, exists = resolve_decl_value(set, scope, nested_ti)
+				/* TODO: when you forget comma's in a deep nested array, you die. */
 				if !exists {
-					print_error_line("errorloop", set)
+					print_error_line("Value in array is malformed", set)
 					return value, false
 				}
 				inc(set)
@@ -55,6 +56,8 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 		case TYPE_POINTER:
 			/* TODO: Add typechecking here, as well as some sort of indication of where to find which variable is being pointed to,
 			   as the actual pointer is naturally a runtime variable, and we have to communicate that at compiletime to the backend somehow */
+			print_error_line("resolve_decl_value: pointers are unsupported", set)
+			return value, false
 		case TYPE_STRUCT:
 			print_error_line("resolve_decl_value: struct", set)
 	}

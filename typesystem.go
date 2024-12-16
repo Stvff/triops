@@ -94,6 +94,27 @@ func align_of_type(ti Type_Index) int {
 	panic("align_of_type: unreachable")
 }
 
+func amount_of_type(ti Type_Index) int {
+	i, t := unpack_ti(ti)
+	switch t {
+		case TYPE_ERR: panic("align_of_type: internal type error")
+		case TYPE_BARE:
+			return bare_types[i].amount
+		case TYPE_INDIRECT:
+			return amount_of_type(follow_type(ti))
+		case TYPE_RT_ARRAY:
+			return 2
+		case TYPE_ST_ARRAY:
+			return st_array_types[i].size*amount_of_type(follow_type(ti))
+		case TYPE_POINTER:
+			return 1
+		case TYPE_STRUCT:
+			panic("align_of_type: struct")
+	}
+	panic("align_of_type: unreachable")
+}
+
+
 func are_types_equal(left, right Type_Index) bool {
 	var (
 		left_i, right_i int
