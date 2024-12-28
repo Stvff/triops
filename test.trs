@@ -1,6 +1,12 @@
+type A is 3 columns of 2 bytes #intform;
+type B is 3 columns #floatform;
+type C is 2 bytes #stringform;
+
+type AA is 3 columns of 2 bytes;
+type BB is 3 columns;
+type CC is 2 bytes;
+
 #*
-type A is 1 by 2;
-type B is 2 by 4 bytes; ## `bytes` is optional
 type C is B;
 type D is A[2];
 
@@ -27,6 +33,10 @@ type char is 1 bytes;
 
 enum int syscalls {write = 1, exit = 60};
 enum int stdout = 1;
+
+type Thing is 4 columns of 4 bytes;
+
+Thing thing = 333;
 
 char[] greeting = "Hewwoo >.<\n";
 int var = stdout;

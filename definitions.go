@@ -57,9 +57,10 @@ var keywords = map[string]Token_Tag {
 	"entry"   : KEYWORD_ENTRY,
 	"macro"   : KEYWORD_MACRO,
 
-	"is"    : KEYWORD_IS,
-	"by"    : KEYWORD_BY,
-	"bytes" : KEYWORD_BYTES,
+	"is"      : KEYWORD_IS,
+	"columns" : KEYWORD_COLUMNS,
+	"of"      : KEYWORD_OF,
+	"bytes"   : KEYWORD_BYTES,
 
 	"prec"   : KEYWORD_PREC,
 	"asm"    : KEYWORD_ASM,
@@ -123,7 +124,8 @@ const (
 		KEYWORD_MACRO
 	
 		KEYWORD_IS
-		KEYWORD_BY
+		KEYWORD_COLUMNS
+		KEYWORD_OF
 		KEYWORD_BYTES
 	
 		KEYWORD_PREC

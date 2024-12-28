@@ -28,3 +28,12 @@ section .data
 	msg:
 		dq 0
 		db "Hewwoo >.<", 0x0a
+
+	Thing:
+		dq 0
+		db blahblah
+		dq 0
+		db bljla
+		dq 0
+		db bljlasldfjlk
+		etc

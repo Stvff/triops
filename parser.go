@@ -16,42 +16,74 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 		return value, false
 	}
 	
-	_, tag := unpack_ti(ti)
+	tag_associated_index, tag := unpack_ti(ti)
 	value = Value{form : VALUE_FORM_NONE, pos : value_head}
-	switch tag {
+	tagswitch: switch tag {
 		case TYPE_ERR: print_error_line("resolve_decl_value: internal type error", set)
 		case TYPE_BARE:
 			/* TODO: this has to account for the different forms of a bare type!! */
 			var integer int
 			integer, exists = resolve_integer(set, scope)
-			return integer_to_value(integer), exists
+			value = integer_to_sized_value(integer, size_of_type(ti))
+			return value, exists
 		case TYPE_INDIRECT:
 			return resolve_decl_value(set, scope, follow_type(ti))
 		case TYPE_RT_ARRAY, TYPE_ST_ARRAY:
 			/* Of arrays, there are two cases: it is an array with curly braces, or it is a string.
 			   There are some wild card possibilities, but for now, let us just deal with these two cases.
 			   In the case of a string, the value form of the type needs to be checked if it even accepts strings */
+			if tag == TYPE_RT_ARRAY {
+				make_value(8) /* This is the zero-initialized size */
+			}
 			nested_ti := follow_type(ti)
 			/* the stringform case */
 			if si, st := unpack_ti(nested_ti); st == TYPE_BARE {
-				value, exists = resolve_string_value(set, scope)
+				var tvalue Value
+				tvalue, exists = resolve_string_value(set, scope)
 				if exists && bare_types[si].form != VALUE_FORM_WILD && bare_types[si].form != VALUE_FORM_STRING {
 					print_error_line("This variable/constant does not allow string assignment", set)
 					return value, false
 				} else if exists {
-					return value, true
+					if tag == TYPE_RT_ARRAY {
+						/* TODO: this and the else clause should take into account types that are
+						   larger than bytes, and pad or error if it's mismatched */
+						rt_array_types[tag_associated_index].size = tvalue.len
+					} else if st_array_types[tag_associated_index].size != tvalue.len {
+						print_error_line("Given string was larger than the size of the array", set)
+						return value, false
+					}
+					break tagswitch
 				}
 			}
 			/* the curly braces array case */
+			array_len := 0
 			for curr(set).tag != KEYWORD_CLOSE_BRACE && !set.end {
 				inc(set)
+				old_index = set.index
 				_, exists = resolve_decl_value(set, scope, nested_ti)
-				/* TODO: when you forget comma's in a deep nested array, you die. */
+				/* TODO: Handle extra comma's more gracefully */
+				/* TODO: Report on how much values were expected */
 				if !exists {
-					print_error_line("Value in array is malformed", set)
+					if old_index == set.index { print_error_line("Value in array is malformed", set) }
 					return value, false
 				}
 				inc(set)
+				if curr(set).tag != KEYWORD_COMMA && curr(set).tag != KEYWORD_CLOSE_BRACE{
+					print_error_line("Unexpected token in array literal", set)
+					return value, false
+				}
+				array_len += 1
+				if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size < array_len {
+					print_error_line("Too many values in static array literal", set)
+					return value, false
+				}
+			}
+			if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size > array_len {
+				print_error_line("Too few values in static array literal", set)
+				return value, false
+			}
+			if tag == TYPE_RT_ARRAY {
+				rt_array_types[tag_associated_index].size = array_len
 			}
 		case TYPE_POINTER:
 			/* TODO: Add typechecking here, as well as some sort of indication of where to find which variable is being pointed to,
@@ -76,7 +108,7 @@ func parse_type(set *Token_Set, scope *Scope) (ti Type_Index, exists bool) {
 		inc(set)
 		/* [] */
 		if curr(set).tag == KEYWORD_CLOSE_BRACKET {
-			ti = append_rt_array_type(Type_Des_RT_Array{ti})
+			ti = append_rt_array_type(Type_Des_RT_Array{ti, 0})
 			inc(set)
 			continue
 		}

@@ -29,14 +29,14 @@ func generate_assembly(scope *Scope, set *Token_Set) bool {
 		nasm Nasm
 		var_amounts Var_Amounts
 	)
-	nasm.data_sec.WriteString("\nsection .data\n")
+	addf(&nasm.data_sec, "\nsection .data\n")
 
-	nasm.text_sec.WriteString("\nsection .text\n_start:\n")
+	addf(&nasm.text_sec, "\nsection .text\n_start:\n")
 	//text_sec.WriteString("\tpush rbx; Triops: cdecl politeness\n")
 	//text_sec.WriteString("\tpush rbp; Triops: idem\n")
 
 	/* collecting all variables, concluding their offsets */
-	nasm.text_sec.WriteString("\t; Triops: Global variable intialization\n")
+	addf(&nasm.text_sec, "\t; Triops: Global variable intialization\n")
 
 	nasm.var_poss = make(map[string]Var_Pos)
 	for name, decl := range scope.decls {
@@ -73,47 +73,18 @@ func generate_assembly(scope *Scope, set *Token_Set) bool {
 	nasm.stack_offsets[4] += (16 - nasm.stack_offsets[4]%16) % 16
 	nasm.stack_offsets[5] = nasm.stack_offsets[4] + 16*var_amounts.vars_16B
 	nasm.stack_offsets[5] += (16 - nasm.stack_offsets[5]%16) % 16 /* aligns the top to 16B */
-	fmt.Println(nasm.var_poss)
-	fmt.Println(var_amounts)
-	fmt.Println(nasm.stack_offsets)
-	nasm.text_sec.WriteString(fmt.Sprintf("\tsub rsp, %v; Triops: This is the size of all variables on the stack\n", nasm.stack_offsets[5]))
+	// fmt.Println(nasm.var_poss)
+	// fmt.Println(var_amounts)
+	// fmt.Println(nasm.stack_offsets)
+	addf(&nasm.text_sec, "\tsub rsp, %v; Triops: This is the size of all variables on the stack\n", nasm.stack_offsets[5])
 
 	for name, decl := range scope.decls {
 		gen_init_decl(&nasm, decl, name)
 	}
-/*
-		fmt.Println(name, decl)
-		amount := amount_of_type(decl.typ)
-		align := align_of_type(decl.typ)
-		does the value initialization
-		i, t := unpack_ti(decl.typ)
-		try_over:
-		switch t {
-			case TYPE_ERR: panic("codegen: internal type error")
-			case TYPE_BARE:
-				
-			case TYPE_INDIRECT:
-				ti = indirect_types[i].target
-			case TYPE_RT_ARRAY:
-				ti = rt_array_types[i].target
-			case TYPE_ST_ARRAY:
-				ti = st_array_types[i].target
-			case TYPE_POINTER:
-				ti = pointer_types[i].target
-			case TYPE_STRUCT:
-				panic("codegen: struct")
-		}
-		i, t = unpack_ti(ti)
-		for t == TYPE_INDIRECT {
-			ti = indirect_types[i].target
-			i, t = unpack_ti(ti)
-		}
-	}
-*/
 
-	nasm.text_sec.WriteString("\n\t; Triops: User code\n")
+	addf(&nasm.text_sec, "\n\t; Triops: User code\n")
 	for _, instruction := range scope.assembly.instructions {
-		nasm.text_sec.WriteString("\t")
+		addf(&nasm.text_sec, "\t")
 		nasm.text_sec.WriteString(token_txt_str(instruction.mnemonic, set.text))
 		for arg_nr, arg := range instruction.args {
 			has_verbatim := arg.verbatim.pos != 0
@@ -121,7 +92,7 @@ func generate_assembly(scope *Scope, set *Token_Set) bool {
 			if !has_verbatim && !has_immediate {
 				break
 			}
-			if arg_nr != 0 { nasm.text_sec.WriteString(",") }
+			if arg_nr != 0 { addf(&nasm.text_sec, ",") }
 
 			/* TODO: differentiate between registers, labels and variables in the 'verbatim' catagory
 			   We might want to check if a register is rsp, and warn once for that. We can do that
@@ -139,32 +110,32 @@ func generate_assembly(scope *Scope, set *Token_Set) bool {
 
 			if has_verbatim && has_immediate {
 				v, _ := value_to_integer(arg.immediate)
-				nasm.text_sec.WriteString(fmt.Sprintf(" %v [%v + %v]", indexing_word(instruction.alignment), verbatim_str, v*instruction.alignment))
+				addf(&nasm.text_sec, " %v [%v + %v]", indexing_word(instruction.alignment), verbatim_str, v*instruction.alignment)
 			} else if has_verbatim && !has_immediate {
-				nasm.text_sec.WriteString(fmt.Sprintf(" %v", verbatim_str))
+				addf(&nasm.text_sec, " %v", verbatim_str)
 			} else if !has_verbatim && has_immediate {
 				v, _ := value_to_integer(arg.immediate)
-				nasm.text_sec.WriteString(fmt.Sprintf(" %v", v))
+				addf(&nasm.text_sec, " %v", v)
 			}
 		}
-		nasm.text_sec.WriteString("\n")
+		addf(&nasm.text_sec, "\n")
 	}
-	nasm.text_sec.WriteString("\n\t; Triops: leaving the stack as I found it\n")
-	nasm.text_sec.WriteString(fmt.Sprintf("\tadd rsp, %v; Triops: This was the size of all variables on the stack\n", nasm.stack_offsets[5]))
+	addf(&nasm.text_sec, "\n\t; Triops: leaving the stack as I found it\n")
+	addf(&nasm.text_sec, "\tadd rsp, %v; Triops: This was the size of all variables on the stack\n", nasm.stack_offsets[5])
 	/* TODO: think of linking options or just program options that change the behaviour of exiting code */
-	nasm.text_sec.WriteString("\n\t; Triops: Adding the unix exit, in case the user doesn't add one\n")
-	nasm.text_sec.WriteString("\tmov rax, 60; Triops: 60 is exit\n")
-	nasm.text_sec.WriteString("\tmov rdi, 0; Triops: 0 is success\n")
-	nasm.text_sec.WriteString("\tsyscall\n")
+	addf(&nasm.text_sec, "\n\t; Triops: Adding the unix exit, in case the user doesn't add one\n")
+	addf(&nasm.text_sec, "\tmov rax, 60; Triops: 60 is exit\n")
+	addf(&nasm.text_sec, "\tmov rdi, 0; Triops: 0 is success\n")
+	addf(&nasm.text_sec, "\tsyscall\n")
 	//nasm.text_sec.WriteString("\tpush rbp; Triops: cdecl politeness\n")
 	//nasm.text_sec.WriteString("\tpush rbx; Triops: idem\n")
 
 	var full_file strings.Builder
-	full_file.WriteString("; This code is generated by Triops (in first person). If I have something to say, it'll be prepended with 'Triops'.\n")
-	full_file.WriteString("; Triops version: 0\n")
-	full_file.WriteString("\nglobal _start\n")
-	full_file.WriteString(nasm.text_sec.String())
-	full_file.WriteString(nasm.data_sec.String())
+	addf(&full_file, "; This code is generated by Triops (in first person). If I have something to say, it'll be prepended with 'Triops'.\n")
+	addf(&full_file, "; Triops version: 0\n")
+	addf(&full_file, "\nglobal _start\n")
+	addf(&full_file, nasm.text_sec.String())
+	addf(&full_file, nasm.data_sec.String())
 	fmt.Println(full_file.String())
 	return true
 }
@@ -172,8 +143,18 @@ func generate_assembly(scope *Scope, set *Token_Set) bool {
 func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 	var_pos := nasm.var_poss[name]
 	stack_pos := nasm.stack_offsets[var_pos.l2_alignment] + l2_to_align[var_pos.l2_alignment]*var_pos.index
+	addf(&nasm.text_sec, "\t; Triops: init `%v`\n", name)
 
+	/* putting the init data in the text section */
+	addf(&nasm.data_sec, "\tvardata.%v:\n", name)
+	addf(&nasm.data_sec, "\tdb ")
+	for i := range decl.init.len {
+		if i != 0 { addf(&nasm.data_sec, ", ") }
+		addf(&nasm.data_sec, "%v", all_values[decl.init.pos + i])
+	}
+	addf(&nasm.data_sec, "\n")
 	
+	/* several init types */
 	ti := decl.typ
 	ti_i, ti_t := unpack_ti(ti)
 	for ti_t == TYPE_INDIRECT {
@@ -183,41 +164,39 @@ func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 	switch ti_t {
 		case TYPE_ERR: panic("codegen: internal type error")
 		case TYPE_BARE:
-			nasm.text_sec.WriteString(fmt.Sprintf("\tmov %v [rsp + %v], 0; Triops: init `%v`\n", indexing_word(align_of_type(decl.typ)), stack_pos, name))
 			/* make assignment like normal */
+			type_align := align_of_type(decl.typ)
+			index_word := indexing_word(type_align)
+			ival := decl.init
+			ival.len = type_align
+			for i := range bare_types[ti_i].amount {
+				integer, _ := value_to_integer(ival)
+				addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", index_word, stack_pos + i*type_align, integer)
+				ival.pos += type_align
+			}
 		case TYPE_INDIRECT:
-			/* loop to top until it's a normal type */
+			/* already dealt with before this switch */
 		case TYPE_RT_ARRAY:
 			/* put stuff in data section, which itself might need initialization, so, yipiee */
+			array_data := rt_array_types[ti_i]
 			below_ti := follow_type(ti)
 			ti_i, ti_t = unpack_ti(below_ti)
 			if ti_t == TYPE_BARE /*|| !is_reference_type(below_ti)*/ {
-				array_size := decl.init.len/size_of_type(below_ti)
-				nasm.data_sec.WriteString(fmt.Sprintf("\t%v:\n", name))
-				nasm.data_sec.WriteString("\tdq 0\n")
-				nasm.data_sec.WriteString("\tdb ")
-				for i := range decl.init.len {
-					if i != 0 { nasm.data_sec.WriteString(", ") }
-					nasm.data_sec.WriteString(fmt.Sprintf("%v", all_values[decl.init.pos + i]))
-				}
-				nasm.data_sec.WriteString("\n")
-	
-				nasm.text_sec.WriteString(fmt.Sprintf("\tmov %v [rsp + %v], %v + 8; Triops: init `%v`\n", indexing_word(align_of_type(ti)), stack_pos, name, name))
-				nasm.text_sec.WriteString(fmt.Sprintf("\tmov %v [rsp + %v], %v\n", indexing_word(8), stack_pos + 8, array_size))
+				addf(&nasm.text_sec, "\tmov %v [rsp + %v], vardata.%v + 8\n", indexing_word(align_of_type(ti)), stack_pos, name)
+				addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", indexing_word(8), stack_pos + 8, array_data.size)
 			} else {
-				nasm.text_sec.WriteString("AAAAAAA\n")
+				addf(&nasm.text_sec, "AAAAAAA\n")
 			}
 		case TYPE_ST_ARRAY:
-			/* make assignment of the type below this, repeated a bunch of time */
-			/*
-				push rax
-				xor rax, rax
-				initiation_loop.<varname>.<initdepth>:
-					<do assignment, so do a function call that generates that>
-					cmp rax, <size>
-					ljmp initiation_loop.<varname>.<initdepth>
-				pop rax
-			*/
+			/* looping over indices */
+			array_data := st_array_types[ti_i]
+			addf(&nasm.text_sec, "\tpush rax\n\txor rax, rax\n")
+			addf(&nasm.text_sec, "\tinitiation_loop.%v:\n", name)
+
+			addf(&nasm.text_sec, "\t\tinc rax\n")
+			addf(&nasm.text_sec, "\t\tcmp rax, %v\n", array_data.size)
+			addf(&nasm.text_sec, "\t\tljmp initiation_loop.%v\n", name)
+			addf(&nasm.text_sec, "\tpop rax\n")
 		case TYPE_POINTER:
 			/* see RT_ARRAY */
 			ti = pointer_types[ti_i].target
@@ -236,4 +215,8 @@ func indexing_word(alignment int) string {
 		case 8: return "qword"
 	}
 	return ""
+}
+
+func addf(builder *strings.Builder, format string, a ...any) {
+	builder.WriteString(fmt.Sprintf(format, a...))
 }

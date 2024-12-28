@@ -36,6 +36,7 @@ type Type_Des_Indirect struct{
 
 type Type_Des_RT_Array struct{
 	target Type_Index
+	size int
 }
 
 type Type_Des_St_Array struct{

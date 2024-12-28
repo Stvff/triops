@@ -22,6 +22,18 @@ int value1 = 20;
 int value2 = -20;
 #*
 
+type A is 3 columns of 2 bytes;
+type A is 3 columns;
+type A is 2 bytes;
+
+type A is 3 columns of 2 bytes #intform;
+type A is 3 columns #stringform;
+type A is 2 bytes #floatform;
+
+type A is 3 columns of 2 bytes as integers;
+type A is 3 columns as characters;
+type A is 2 bytes as floats;
+
 For runtime expressions:
 A a, B b = 1, 2;
 C c;

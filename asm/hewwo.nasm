@@ -5,8 +5,8 @@ section .text
 _start:
 	mov rax, 1		; write syscall
 	mov rdi, 1		; stdout
-	mov rsi, msg
-	mov rdx, msglen
+	mov rsi, msg.1
+	mov rdx, msglen.1
 	syscall
 	
 	mov rax, 60		; exit syscall
@@ -14,5 +14,5 @@ _start:
 	syscall
 	
 section .rodata
-	msg: db "Hewwoo >.<", 10	; 10 is newline
-	msglen: equ $ - msg			; equ defines a constant, $ is current pos, msg is the data pos
+	msg.1: db "Hewwoo >.<", 10	; 10 is newline
+	msglen.1: equ $ - msg.1			; equ defines a constant, $ is current pos, msg is the data pos

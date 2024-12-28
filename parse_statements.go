@@ -49,7 +49,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	var (
 		ti Type_Index
 		exists bool
-		value int
+		integer int
 		new_type Type_Des_Bare
 	)
 
@@ -81,20 +81,38 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 		return finish_statement(set)
 	}
 
-	/* getting the alignment value */
-	value, exists = resolve_integer(set, scope)
+
+	new_type.name = name
+	new_type.amount = 1
+	new_type.alignment = 1
+	new_type.form = VALUE_FORM_WILD
+
+	/* getting the first value */
+	integer, exists = resolve_integer(set, scope)
 	if !exists {
 		if curr(set).tag == NONE {
 			print_error_line("Value or type was not defined", set)
 		} else {
-			print_error_line("Type declarations expect the alignment value to be a positive integer", set)
+			print_error_line("Type declarations expect the alignment and column size to be positive integers", set)
 		}
 		return skip_statement(set)
 	}
-	new_type.name = name
-	new_type.amount = 1
-	new_type.alignment = value
-	new_type.form = VALUE_FORM_WILD
+	inc(set)
+
+	alignment_set := false
+	if curr(set).tag == KEYWORD_COLUMNS {
+		new_type.amount = integer
+	} else if curr(set).tag == KEYWORD_BYTES {
+		if integer != 1 && integer != 2 && integer != 4 && integer != 8 && integer != 16 {
+			print_error_line("Alignment can only be a power of two, up to 16", set)
+			return skip_statement(set)
+		}
+		new_type.alignment = integer
+		alignment_set = true
+	} else {
+		print_error_line("Expected either the keyword `bytes` or `columns`", set)
+		return skip_statement(set)
+	}
 	inc(set)
 
 	/* deciding if that was all or not */
@@ -102,43 +120,49 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 		scope.types[new_type.name] = append_bare_type(new_type)
 		return true
 	}
-	if curr(set).tag == KEYWORD_BYTES {
-		if curr(inc(set)).tag == KEYWORD_SEMICOLON {
-			scope.types[new_type.name] = append_bare_type(new_type)
-			return true
-		}
 
-		t := curr(set).tag
-		if t >= DIRECTIVE_INTFORM && t <= DIRECTIVE_BYTEFORM {
-			new_type.form = VALUE_FORM_INTEGER + (Value_Form(t) - DIRECTIVE_INTFORM)
-		} else {
-			print_error_line("Invalid typeform directive", set)
+	if alignment_set != true && curr(set).tag == KEYWORD_OF {
+		inc(set)
+
+		/* getting the alignment value */
+		integer, exists = resolve_integer(set, scope)
+		if !exists {
+			if curr(set).tag == NONE {
+				print_error_line("Value or type was not defined", set)
+			} else {
+				print_error_line("Type declarations expect the alignment column size to be a positive integer", set)
+			}
 			return skip_statement(set)
 		}
 		inc(set)
+		
+		if curr(set).tag != KEYWORD_BYTES {
+			print_error_line("Expected either the keyword `bytes`", set)
+			return skip_statement(set)
+		}
+		if integer != 1 && integer != 2 && integer != 4 && integer != 8 && integer != 16 {
+			print_error_line("Alignment can only be a power of two, up to 16", set)
+			return skip_statement(set)
+		}
+		new_type.alignment = integer
+		inc(set)
+	}
+
+	/* deciding if that was all or not */
+	if curr(set).tag == KEYWORD_SEMICOLON {
 		scope.types[new_type.name] = append_bare_type(new_type)
-		return finish_statement(set)
+		return true
 	}
-	if curr(set).tag != KEYWORD_BY {
-		print_error_line("The word 'by' or 'bytes' was expected", set)
+
+	if t := curr(set).tag; t >= DIRECTIVE_INTFORM && t <= DIRECTIVE_BYTEFORM {
+		new_type.form = VALUE_FORM_INTEGER + (Value_Form(t) - DIRECTIVE_INTFORM)
+	} else {
+		print_error_line("Invalid typeform directive", set)
 		return skip_statement(set)
 	}
 	inc(set)
 
-	/* getting the amount value */
-	value, exists = resolve_integer(set, scope)
-	if !exists {
-		print_error_line("Type declarations expect the amount value to be a positive integer", set)
-		return skip_statement(set)
-	}
-	new_type.amount = value
 	scope.types[new_type.name] = append_bare_type(new_type)
-	inc(set)
-
-	/* finishing up */
-	if curr(set).tag == KEYWORD_BYTES {
-		return finish_statement(inc(set))
-	}
 	return finish_statement(set)
 }
 
@@ -176,7 +200,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 			print_error_line("Invalid integer", set)
 			return skip_statement(set)
 		}
-		value = integer_to_value(integer)
+		value = integer_to_sized_value(integer, size_of_type(typ))
 		evid.name = "#"
 		enum_values[evid] = value
 		return finish_statement(inc(set))
@@ -212,7 +236,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 				return skip_statement(set)
 			}
 			inc(set)
-			value = integer_to_value(integer)
+			value = integer_to_sized_value(integer, size_of_type(typ))
 			enum_values[evid] = value
 		} else {
 			value = increment_value(value)

@@ -35,6 +35,15 @@ func integer_to_value(integer int) (value Value) {
 	return value
 }
 
+func integer_to_sized_value(integer int, size int) (value Value) {
+	value = make_value(size)
+	value.form = VALUE_FORM_INTEGER
+	for i := 0; i < value.len && i < 8; i += 1 {
+		all_values[value.pos + i] = byte(integer >> (8*i))
+	}
+	return value
+}
+
 func value_to_integer(value Value) (integer int, exists bool) {
 	for i := 0; i < value.len; i += 1 {
 		integer += int(all_values[value.pos+i]) << (8*i)
