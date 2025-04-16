@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	file, err := os.ReadFile("test.trs")
+	file, err := os.ReadFile("stest.trs")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -140,7 +140,7 @@ func main() {
 		case KEYWORD_ENTRY:
 			if !parse_asm(&set, &global_scope) { error_count += 1 }
 		default:
-			print_error_line("default", &set)
+			print_error_line("Unexpected toplevel token", &set)
 			skip_statement(&set)
 			error_count += 1
 		}
@@ -153,8 +153,8 @@ func main() {
 	for name, value := range enum_values { fmt.Println(name, value) }
 	fmt.Println()
 	for name, decl := range global_scope.decls { fmt.Println(name, decl) }
-	fmt.Println(all_values)
 */
+	fmt.Println(all_values)
 	if error_count == 0 {
 		generate_assembly(&global_scope, &set)
 	} else {

@@ -35,6 +35,12 @@ func integer_to_value(integer int) (value Value) {
 	return value
 }
 
+func integer_at_value(value Value, integer int) {
+	for i := 0; i < 8; i += 1 {
+		all_values[value.pos + i] = byte(integer >> (8*i))
+	}
+}
+
 func integer_to_sized_value(integer int, size int) (value Value) {
 	value = make_value(size)
 	value.form = VALUE_FORM_INTEGER

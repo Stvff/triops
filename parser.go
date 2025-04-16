@@ -33,7 +33,10 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 			   There are some wild card possibilities, but for now, let us just deal with these two cases.
 			   In the case of a string, the value form of the type needs to be checked if it even accepts strings */
 			if tag == TYPE_RT_ARRAY {
-				make_value(8) /* This is the zero-initialized size */
+				/* This holds the size of the array, which later has to be filled in,
+				   and then later set to zero when we get to the assembly stage, because this region
+				   also holds the size of the allocated buffer (which is zero when in section .data) */
+				make_value(8)
 			}
 			nested_ti := follow_type(ti)
 			/* the stringform case */
@@ -47,7 +50,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 					if tag == TYPE_RT_ARRAY {
 						/* TODO: this and the else clause should take into account types that are
 						   larger than bytes, and pad or error if it's mismatched */
-						rt_array_types[tag_associated_index].size = tvalue.len
+						integer_at_value(value, tvalue.len)
 					} else if st_array_types[tag_associated_index].size != tvalue.len {
 						print_error_line("Given string was larger than the size of the array", set)
 						return value, false
@@ -83,7 +86,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 				return value, false
 			}
 			if tag == TYPE_RT_ARRAY {
-				rt_array_types[tag_associated_index].size = array_len
+				integer_at_value(value, array_len)
 			}
 		case TYPE_POINTER:
 			/* TODO: Add typechecking here, as well as some sort of indication of where to find which variable is being pointed to,
@@ -108,7 +111,7 @@ func parse_type(set *Token_Set, scope *Scope) (ti Type_Index, exists bool) {
 		inc(set)
 		/* [] */
 		if curr(set).tag == KEYWORD_CLOSE_BRACKET {
-			ti = append_rt_array_type(Type_Des_RT_Array{ti, 0})
+			ti = append_rt_array_type(Type_Des_RT_Array{ti})
 			inc(set)
 			continue
 		}
@@ -296,14 +299,14 @@ func token_txt_str(token Token, full_text string) string {
 
 func skip_statement(set *Token_Set) bool {
 //	fmt.Println("skip time")
-	brace_detected := set.braces != 0
+	brace_detected := set.braces > set.codebraces
 	skipping: for !set.end {
 		switch curr(set).tag {
-		case KEYWORD_SEMICOLON: if set.braces == 0 { break skipping }
+		case KEYWORD_SEMICOLON: if set.braces == set.codebraces { break skipping }
 		case KEYWORD_OPEN_BRACE: brace_detected = true
 		case KEYWORD_CLOSE_BRACE:
 		}
-		if brace_detected && set.braces == 0 { break }
+		if brace_detected && set.braces == set.codebraces { break }
 		inc(set)
 	}
 	if set.index < len(set.tokens)-1 && set.tokens[set.index + 1].tag == KEYWORD_SEMICOLON { inc(set) }

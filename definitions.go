@@ -193,6 +193,7 @@ const (
 
 type Token_Set struct {
 	index int
+	codebraces int
 	braces int
 	end bool
 	text string

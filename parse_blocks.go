@@ -1,12 +1,14 @@
 package main
 
-
 func parse_asm(set *Token_Set, scope *Scope) bool {
 	inc(set)
 	single_statement := false
 	if curr(set).tag != KEYWORD_OPEN_BRACE {
 		single_statement = true
-	} else { inc(set) }
+	} else {
+		set.codebraces += 1
+		inc(set)
+	}
 	ok := true
 
 	statloop: for ; !set.end ; inc(set) {
@@ -69,7 +71,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				reg_alignment := reg_alignments[reg_nr]
 				if arg_nr == 0 {
 					alignment_of_instruction = reg_alignment
-				} else {
+				} else if alignment_of_instruction != reg_alignment {
 					ok = false
 					print_error_line("This register does not have the alignment expected in its context", set)
 					skip_statement(set)
@@ -155,5 +157,10 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 
 		if single_statement { break statloop }
 	} /* statement loop */
+
+	if !single_statement {
+		set.codebraces -= 1
+	}
+
 	return ok
 }

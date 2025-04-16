@@ -7,17 +7,22 @@ section .text
 _start:
 	; Triops: Global variable intialization
 	sub rsp, 32; Triops: This is the size of all variables on the stack
-	mov qword [rsp + 0], greeting + 8; Triops: init `greeting`
-	mov qword [rsp + 8], 11
-	mov qword [rsp + 16], 0; Triops: init `var`
+
+	; Triops: init `hellos`
+	mov qword [rsp + 0], vardata.hellos + 8
+	mov qword [rsp + 8], 4
+
+	; Triops: init `aaa`
+	mov qword [rsp + 16], vardata.aaa + 8
+	mov qword [rsp + 24], 2
 
 	; Triops: User code
+	mov rax, qword [rsp + 0 + 0]
+	mov rsi, qword [rax + 16]
+	mov rdx, qword [rax + 24]
 	mov rax, 1
 	mov rdi, 1
-	mov rsi, qword [rsp + 0 + 0]
-	mov rdx, qword [rsp + 0 + 8]
 	syscall
-	add qword [rsp + 16 + 0], 1
 
 	; Triops: leaving the stack as I found it
 	add rsp, 32; Triops: This was the size of all variables on the stack
@@ -28,6 +33,50 @@ _start:
 	syscall
 
 section .data
-	greeting:
-	dq 0
-	db 72, 101, 119, 119, 111, 111, 32, 62, 46, 60, 10
+	vardata.hellos.in:
+		dq 0; Triops: Allocated
+		db 104, 101, 108, 108, 111, 10
+		dq 0; Triops: Allocated
+		db 104, 101, 121, 10
+		dq 0; Triops: Allocated
+		db 104, 97, 105, 105, 105, 10
+		dq 0; Triops: Allocated
+		db 103, 114, 101, 101, 116, 105, 110, 103, 115, 10
+	vardata.hellos:
+		dq 0; Triops: Allocated
+		dq vardata.hellos.in + 8, 6
+		dq vardata.hellos.in + 22, 4
+		dq vardata.hellos.in + 34, 6
+		dq vardata.hellos.in + 48, 10
+
+	vardata.aaa.in0.in:
+		dq 0; Triops: Allocated
+		db 104
+		dq 0; Triops: Allocated
+		db 104, 97, 97, 97
+		dq 0; Triops: Allocated
+		db 104, 111, 111, 104, 111, 111, 111
+	vardata.aaa.in0:
+		dq 0; Triops: Allocated
+		dq vardata.aaa.in0.in + 8, 1
+		dq vardata.aaa.in0.in + 17, 4
+		dq vardata.aaa.in0.in + 29, 7
+
+	vardata.aaa.in1.in:
+		dq 0; Triops: Allocated
+		db 104, 97, 105, 97, 97, 105, 97, 97
+	vardata.aaa.in1:
+		dq 0; Triops: Allocated
+		dq vardata.aaa.in1.in + 8, 8
+
+; generated (incorrect)
+	;vardata.aaa:
+	;	dq 0; Triops: Allocated
+	;	dq vardata.aaa.in + 8, 3
+	;	dq vardata.aaa.in + 19, 1240249116131328
+
+; handwritten correction
+	vardata.aaa:
+		dq 0; Triops: Allocated
+		dq vardata.aaa.in0 + 8, 3
+		dq vardata.aaa.in1 + 8, 2
