@@ -8,17 +8,16 @@ char[][] hellos = {
 	"hello\n", "hey\n", "haiii\n", "greetings\n"
 };
 
-#*
 char[][][] aaa = {
 	{"h", "haaa", "hoohooo"}, {"haiaaiaa"}
 };
-*#
 
 s32[][][] example = {
 	{ {97, 97, 97}, {98, 98} }, { {99}, {100, 100, 100} }
 };
 
 ## dip[0][0][0][0] == 99
+## dip[3][2][1][1] == 14
 type u16 is 2 bytes;
 u16[][][][] dip = {
 	{
@@ -52,16 +51,13 @@ entry {
 	mov #rq rsi, greet[0];
 	mov #rq rdx, greet[1];
 
-#*
-	mov #rq rax, hellos[0];
-	mov #rq rsi, #rq rax[2];
-	mov #rq rdx, #rq rax[3];
+	mov #rq rax, 1;
+	mov #rq rdi, 1;
+	syscall;
 
-	mov #rq rax, aaa[0];
-	mov #rq rax, #rq rax[2];
-	mov #rq rsi, #rq rax[0];
-	mov #rq rdx, #rq rax[1];
-*#
+	mov #rq rax, hellos[0];
+	mov #rq rsi, #rq rax[4];
+	mov #rq rdx, #rq rax[5];
 
 	mov #rq rax, 1;
 	mov #rq rdi, 1;

@@ -153,10 +153,16 @@ func main() {
 	for name, value := range enum_values { fmt.Println(name, value) }
 	fmt.Println()
 	for name, decl := range global_scope.decls { fmt.Println(name, decl) }
-*/
 	fmt.Println(all_values)
+*/
 	if error_count == 0 {
-		generate_assembly(&global_scope, &set)
+		full_asm, _ := generate_assembly(&global_scope, &set)
+		fmt.Println(full_asm)
+		err = os.WriteFile("asm/test.nasm", []byte(full_asm), 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	} else {
 		fmt.Printf("Amount of errors: %v\n", error_count)
 	}
