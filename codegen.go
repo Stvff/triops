@@ -145,6 +145,15 @@ func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 	var_pos := nasm.var_poss[name]
 	stack_pos := nasm.stack_offsets[var_pos.l2_alignment] + l2_to_align[var_pos.l2_alignment]*var_pos.index
 	addf(&nasm.text_sec, "\n\t; Triops: init `%v`\n", name)
+	if decl.init.len == 0 {
+		type_align := align_of_type(decl.typ)
+		index_word := indexing_word(type_align)
+		amount := amount_of_type(decl.typ)
+		for i := range amount {
+			addf(&nasm.text_sec, "\tmov %v [rsp + %v], 0; Triops: zero init\n", index_word, stack_pos + i*type_align)
+		}
+		return
+	}
 	
 	/* several init types */
 	ti := decl.typ
@@ -213,6 +222,12 @@ func recurse_gen_init_decl(data_sec *strings.Builder, name string, ti Type_Index
 		case TYPE_RT_ARRAY:
 			below_ti := follow_type(ti)
 			_, below_ti_t := unpack_ti(below_ti)
+			// if value.len == 0 {
+			// 	addf(data_sec, "\t\tdq 0; Triops: Dynamic array initialized to zero\n", depth)
+			// 	addf(data_sec, "\t\tdq 0", depth)
+			// 	*ledger = append(*ledger, Nested_Array_Ledge{*data_sec_offset + 8, 0, depth})
+			// 	return
+			// }
 
 			element_amount, _ := value_to_integer(Value{VALUE_FORM_NONE, value.pos, 8})
 			value.pos += 8

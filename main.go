@@ -136,6 +136,9 @@ func main() {
 				error_count += 1
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
+		case KEYWORD_OPEN_PAREN:
+			inc(&set)
+			if !parse_proc_decl(&set, &global_scope) { error_count += 1 }
 		case KEYWORD_ASM: fallthrough
 		case KEYWORD_ENTRY:
 			if !parse_asm(&set, &global_scope) { error_count += 1 }
@@ -148,16 +151,16 @@ func main() {
 /*	fmt.Println()
 	for _, typ := range bare_types { fmt.Println(typ) }
 	for _, typ := range indirect_types { fmt.Println(typ) }
-	fmt.Println()
+	fmt.Println()/*
 	for name, enum := range global_scope.enums { fmt.Println(name, enum) }
 	for name, value := range enum_values { fmt.Println(name, value) }
-	fmt.Println()
-	for name, decl := range global_scope.decls { fmt.Println(name, decl) }
+	fmt.Println()/*
+*/	for name, decl := range global_scope.decls { fmt.Println(name, decl) }/*
 	fmt.Println(all_values)
 */
 	if error_count == 0 {
 		full_asm, _ := generate_assembly(&global_scope, &set)
-		fmt.Println(full_asm)
+		// fmt.Println(full_asm)
 		err = os.WriteFile("asm/test.nasm", []byte(full_asm), 0666)
 		if err != nil {
 			fmt.Println(err)

@@ -1,9 +1,26 @@
 package main
 
+func parse_proc_decl(set *Token_Set, scope *Scope) bool {
+	set.commas_and_parens_as_semis = true
+	parse_variable_decl(set, scope)
+	inc(set)
+	inc(set)
+	parse_variable_decl(set, scope)
+	inc(set)
+	inc(set)
+	inc(set)
+	parse_variable_decl(set, scope)
+	inc(set)
+
+	set.commas_and_parens_as_semis = false
+	// parse_proc_block(set, scope)
+	return finish_statement(set)
+}
+
 func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 	var new_decl Decl_Des
 	/* checking type */
-//	print_error_line("Decl?", set)
+	// print_error_line("Decl?", set)
 	_, exists := scope.types[token_str(set)]
 	if !exists {
 		return false
@@ -20,6 +37,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 
 	/* checking if there's an init constant */
 	if curr(set).tag != KEYWORD_EQUALS {
+		scope.decls[name] = new_decl
 		return finish_statement(set)
 	}
 	inc(set)

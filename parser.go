@@ -301,12 +301,16 @@ func skip_statement(set *Token_Set) bool {
 //	fmt.Println("skip time")
 	brace_detected := set.braces > set.codebraces
 	skipping: for !set.end {
-		switch curr(set).tag {
+		tagswitch: switch curr(set).tag {
+		case KEYWORD_CLOSE_PAREN: fallthrough
+		case KEYWORD_COMMA:
+			if !set.commas_and_parens_as_semis { break tagswitch }
+			fallthrough
 		case KEYWORD_SEMICOLON: if set.braces == set.codebraces { break skipping }
 		case KEYWORD_OPEN_BRACE: brace_detected = true
 		case KEYWORD_CLOSE_BRACE:
 		}
-		if brace_detected && set.braces == set.codebraces { break }
+		if brace_detected && set.braces == set.codebraces { break skipping }
 		inc(set)
 	}
 	if set.index < len(set.tokens)-1 && set.tokens[set.index + 1].tag == KEYWORD_SEMICOLON { inc(set) }
@@ -315,7 +319,13 @@ func skip_statement(set *Token_Set) bool {
 }
 
 func finish_statement(set *Token_Set) bool {
-	if curr(set).tag == KEYWORD_SEMICOLON { return true }
-	print_error_line("Statement must be ended with a semicolon", dec(set));
-	return skip_statement(inc(set))
+	if set.commas_and_parens_as_semis {
+		if curr(set).tag == KEYWORD_COMMA || curr(set).tag == KEYWORD_CLOSE_PAREN { return true }
+		print_error_line("Comma or closing parenthesis missing", dec(set))
+		return skip_statement(inc(set))
+	} else {
+		if curr(set).tag == KEYWORD_SEMICOLON { return true }
+		print_error_line("Statement must be ended with a semicolon", dec(set))
+		return skip_statement(inc(set))
+	}
 }

@@ -195,6 +195,7 @@ type Token_Set struct {
 	index int
 	codebraces int
 	braces int
+	commas_and_parens_as_semis bool
 	end bool
 	text string
 	tokens []Token
