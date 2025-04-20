@@ -97,46 +97,47 @@ statements:
 type i64: 8;
 type f32: 4;
 
-type string: 8 by 2;
-struct slice {
+type String: 8 by 2;
+struct Slice {
 	i64 len,
 	byte^ ptr
 }
 
-prefix (int) seven insert return 7;
+(int s) seven insert s = 7;
 
-postfix (slice slc) as_slice (string str) asm {
+(Slice slc) (String str) as_slice asm {
 	mov slc.ptr, str[0];
 	mov slc.len, str[1];
 }
 
-postfix (string str) as_string (slice slc) asm {
+(String str) as_string (Slice slc) asm {
 	mov str[0], slc.ptr;
 	mov str[1], slc.len;
 }
 
-infix (string) append (string left, string right) {
-	return (append (string as_slice), (string as_slice)) as_string;
+(String full) (String left, String right) append {
+	full = (append (string as_slice), (string as_slice)) as_string;
 }
 
-prefix (slice) append (slice left, slice right) {
+(Slice new) append (Slice left, Slice right) {
 	i64 new_len = left.len + right.len;
 	byte^ new_buffer = clib.alloc new_len;
-	copy slice{new_len, new_buffer}, left;
-	copy slice{right_len, new_buffer + left_len}, right;
-	return slice{new_len, new_buffer};
+	copy Slice{new_len, new_buffer}, left;
+	copy Slice{right_len, new_buffer + left_len}, right;
+	new = Slice{new_len, new_buffer};
 }
 
-infix (i64 res) + (i64 a, i64 b) asm {
+(i64 res) (i64 a) + (i64 b) asm {
 	mov res, a;
 	addi res, b;
 }
 
-prefix (i64 c) add (i64 a, i64 b) insert {
+(i64 c) add (i64 a, i64 b) insert {
 	c = a + b;
 }
 
-infix (f32 f) as (i64 n) asm {
+## infix with two args, inplace stuff???
+(f32 f) as (i64 n) asm {
 	ftoint f, n;
 }
 

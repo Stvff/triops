@@ -119,6 +119,26 @@ infix (i64 res) + (i64 a, i64 b) asm {
 	add res, b;
 }
 
+() <()> meow <()> {
+
+}
+## prefix with return:
+(decls) name (decls) 
+## suffix with return:
+(decls) (decls) name
+## infix with return:
+## naked, only return:
+(decls) name
+
+## prefix without return:
+() name (decls)
+## suffix without return:
+() (decls) name
+## infix without return (illegal):
+() (decls) name (decls)
+## naked without return:
+() name
+
 prefix (i64 c) add (i64 a, i64 b) insert {
 	c = a+b;
 }

@@ -29,14 +29,14 @@ char[] msg = "Heyaa ^.^\n";
 ## this program says hello using linux syscalls
 
 entry asm {
-	mov #reg rax, syscalls.write;
-	mov #reg rdi, stdout;
-	mov #reg rsi, msg[0];
-	mov #reg rdx, msg[1];
+	mov #rq rax, syscalls.write;
+	mov #rq rdi, stdout;
+	mov #rq rsi, msg[0];
+	mov #rq rdx, msg[1];
 	syscall;
 
-	mov #reg rax, syscalls.exit;
-	mov #reg rdi, 0; ## success
+	mov #rq rax, syscalls.exit;
+	mov #rq rdi, 0; ## success
 	syscall;
 }
 ```
@@ -59,10 +59,10 @@ We could imagine an opaque fat pointer type (where 'opaque' means its elements a
 consisting of a normal 8 byte pointer, and an 8 byte length. This would have an alignment of 8 bytes, but be a size of 16 bytes, since there are two elements of 8 bytes.
 So, in Triops:
 ```
-type fat_pointer is 8 by 2 bytes;
+type fat_pointer is 2 columns of 8 bytes;
 ```
-This can be read '8 by 2 (so 16 total) bytes'. Alignment is limited to powers of two, upto 16 bytes.
-Alignment and element count are called the dimensions of the type.
+We can imagine a small table with 2 columns and 8 rows: 16 bytes in total. Alignment is limited to powers of two, upto 16 bytes.
+Alignment and element count are called the dimensions of the type (as per the table analogy).
 
 To get back to our `int`, triops doesn't know what sort of literals this type would want, so currently it would accept any literal that has a size of 4 bytes or less.
 If we wanted to restrict this, there are 4 directives we can use to share our needs with the compiler:
@@ -160,11 +160,11 @@ For static arrays, their alignment is the alignment of the type of which the arr
 and its size is therefore the element count of the array times the element count of the type times the alignment of the type.\
 For example, say we were to make an array of 5 `fat_pointer`s:
 ```
-type fat_pointer is 8 by 2 bytes;
+type fat_pointer is 2 columns of 8 bytes;
 fat_pointer[5] ptrs;
 ```
 `ptrs`'s size would be `5*2*8 = 80` bytes, and its aligment would be 8 bytes.
-Dynamic arrays, since they are a size and a pointer, are `8 by 2 bytes`, regardless of underlaying type.
+Dynamic arrays, since they are a size and a pointer, are `2 columns of 8 bytes`, regardless of underlaying type.
 Pointers are simply 8 bytes in size and alignment.
 
 ## Enums and constants
@@ -202,13 +202,13 @@ add a, b;
 ```
 Defining variables is done outside of `asm` blocks.
 The instruction is copied verbatim to nasm, and not further typechecked (for now).
-[The great unofficial x86 reference](https://www.felixcloutier.com/x86/) is great for seeing what you need. It might seem daunting at first, but it really is quite manageable.
+[The great unofficial x86 reference](https://www.felixcloutier.com/x86/) is great for seeing what we need. It might seem daunting at first, but it really is quite manageable.
 (At some point I might get around to copying all of the instructions and their expected values, but other things have my priority)
 
 For the arguments, there are three options:
 - value literals (these will be translated to hexadecimal)
 - variables and constant (indexed or unindexed)
-- `#reg` followed by a specific register name (which will be copied to nasm verbatim)
+- `#rb`, `#rw`, `#rd`, `#rq` followed by a specific register name (which will be copied to nasm verbatim)
 
 Regarding the indexing of variables and constants, anything with a type that is not of one element (like `fat_pointer`, or `int[3]`),
 must be indexed by a constant, until the type is a single element of its specified alignment.\
@@ -221,7 +221,7 @@ asm {
 	push position[2];
 }
 ```
-In the case of `fat_pointer`, we can recall that its dimensions are `8 by 2`, so we need to reduce it to a single element.
+In the case of `fat_pointer`, we can recall that its dimensions are `2 columns of 8`, so we need to reduce it to a single element.
 In assembly blocks, this can be done by indexing.
 ```
 fat_pointer ptr;
@@ -239,3 +239,6 @@ asm {
 	push ptrs[2][1];
 }
 ```
+There are some caveats to this, which can be grasped with a good understanding of pointers. In an `asm` block, Triops will not de-reference pointers for us.
+At least, not the ones from a variable directly.
+
