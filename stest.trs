@@ -32,6 +32,7 @@ char[0] data;
 int length;
 int system_function;
 int stream;
+int error_code;
 
 entry {
 	#reg data = rsi;
@@ -46,36 +47,30 @@ entry {
 	mov stream, streams.out;
 	syscall;
 
-	mov #rq rsi, greet[0];
-	mov #rq rdx, greet[1];
-
-	mov #rq rax, syscalls.write;
-	mov #rq rdi, streams.out;
-	syscall;
-
 	call #lbl function;
 
-	mov #rq rax, syscalls.exit;
-	mov #rq rdi, 0;
+	#reg error_code = rdi;
+	mov system_function, syscalls.exit;
+	mov error_code, 0;
 	syscall;
 
 	#lbl function;
 		push 6;
 		push #lbl smolstring;
 
-		mov #rq rsi, #rq rsp[0];
-		mov #rq rdx, #rq rsp[1];
+		mov data, #rq rsp[0];
+		mov length, #rq rsp[1];
 	
-		mov #rq rax, syscalls.write;
-		mov #rq rdi, streams.err;
+		mov system_function, syscalls.write;
+		mov stream, streams.err;
 		syscall;
 		call #lbl function2;
 		add #rq rsp, 16;
 	ret;
 
 	#lbl function2;
-		mov #rq rax, syscalls.write;
-		mov #rq rdi, streams.err;
+		mov system_function, syscalls.write;
+		mov stream, streams.err;
 		syscall;
 	ret;
 

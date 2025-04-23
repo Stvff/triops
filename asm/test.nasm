@@ -6,7 +6,7 @@ global _start
 section .text
 _start:
 	; Triops: Global variable intialization
-	sub rsp, 96; Triops: This is the size of all variables on the stack
+	sub rsp, 112; Triops: This is the size of all variables on the stack
 
 	; Triops: init `greet`
 	mov qword [rsp + 0], vardata.greet + 8
@@ -36,6 +36,9 @@ _start:
 	; Triops: init `stream`
 	mov qword [rsp + 88], 0; Triops: zero init
 
+	; Triops: init `error_code`
+	mov qword [rsp + 96], 0; Triops: zero init
+
 	; Triops: User code
 	; Triops: binding data
 	mov rsi,  [rsp + 64]
@@ -54,12 +57,10 @@ _start:
 	mov rax, 1
 	mov rdi, 1
 	syscall
-	mov rsi, qword [rsp + 0 + 0]
-	mov rdx, qword [rsp + 0 + 8]
-	mov rax, 1
-	mov rdi, 1
-	syscall
 	call entry.function
+	; Triops: binding error_code
+	mov rdi,  [rsp + 96]
+
 	mov rax, 60
 	mov rdi, 0
 	syscall
@@ -87,7 +88,7 @@ _start:
 	db 69, 69, 10
 
 	; Triops: leaving the stack as I found it
-	add rsp, 96; Triops: This was the size of all variables on the stack
+	add rsp, 112; Triops: This was the size of all variables on the stack
 
 	; Triops: Adding the unix exit, in case the user doesn't add one
 	mov rax, 60; Triops: 60 is exit
