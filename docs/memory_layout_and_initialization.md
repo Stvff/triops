@@ -74,3 +74,5 @@ Recurse down into the type, until the bottom is reached, at which point those va
 Every time the function exist, a 'ledger' is kept about which values were just put into `.data`, its position and amount, and at what depth of recursion.
 After writing to `.data` (and before writing an entry in the ledger), the current recursion is checked against the last entry in the ledger,
 and if the current depth is smaller than (and not equal to) the last depth, then the info in the ledger is emptied into `.data`.
+
+## Calling convention

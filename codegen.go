@@ -25,7 +25,7 @@ type Nasm struct {
 	var_poss map[string]Var_Pos
 }
 
-func generate_assembly(scope *Scope, set *Token_Set) (string, bool) {
+func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string, bool) {
 	var (
 		nasm Nasm
 		var_amounts Var_Amounts
@@ -86,10 +86,15 @@ func generate_assembly(scope *Scope, set *Token_Set) (string, bool) {
 	addf(&nasm.text_sec, "\n\t; Triops: User code\n")
 	for _, instruction := range scope.assembly.instructions {
 		addf(&nasm.text_sec, "\t")
+		if token_txt_str(instruction.mnemonic, set.text) == "#lbl" {
+			addf(&nasm.text_sec, "%v.%v:\n", scope_path, token_txt_str(instruction.args[0].verbatim, set.text))
+			continue
+		}
 		nasm.text_sec.WriteString(token_txt_str(instruction.mnemonic, set.text))
 		for arg_nr, arg := range instruction.args {
 			has_verbatim := arg.verbatim.pos != 0
 			has_immediate := arg.immediate.len != 0
+			//is_register := DIRECTIVE_REGS_START < arg.verbatim.tag && arg.verbatim.tag < DIRECTIVE_REGS_END
 			if !has_verbatim && !has_immediate {
 				break
 			}
@@ -100,10 +105,10 @@ func generate_assembly(scope *Scope, set *Token_Set) (string, bool) {
 			   in the backend, but not in the frontend.*/
 //			offset := 0
 			verbatim_str := token_txt_str(arg.verbatim, set.text)
-			if has_verbatim && !(DIRECTIVE_REGS_START < arg.verbatim.tag && arg.verbatim.tag < DIRECTIVE_REGS_END) {
+			if has_verbatim && arg.verbatim.tag == NONE {
 				pos, exists := nasm.var_poss[verbatim_str]
 				if !exists {
-					fmt.Println(verbatim_str, DIRECTIVE_REGS_START, arg.verbatim.tag, DIRECTIVE_REGS_END)
+					fmt.Println(verbatim_str, arg.verbatim.tag)
 					panic("codegen: There was an unrecognized variable all the way in codegen")
 				}
 				verbatim_str = fmt.Sprintf("rsp + %v", nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index)
@@ -113,7 +118,11 @@ func generate_assembly(scope *Scope, set *Token_Set) (string, bool) {
 				v, _ := value_to_integer(arg.immediate)
 				addf(&nasm.text_sec, " %v [%v + %v]", indexing_word(instruction.alignment), verbatim_str, v*instruction.alignment)
 			} else if has_verbatim && !has_immediate {
-				addf(&nasm.text_sec, " %v", verbatim_str)
+				if arg.verbatim.tag == DIRECTIVE_LBL {
+					addf(&nasm.text_sec, " %v.%v", scope_path, verbatim_str)
+				} else {
+					addf(&nasm.text_sec, " %v", verbatim_str)
+				}
 			} else if !has_verbatim && has_immediate {
 				v, _ := value_to_integer(arg.immediate)
 				addf(&nasm.text_sec, " %v", v)

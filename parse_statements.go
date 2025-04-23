@@ -2,15 +2,28 @@ package main
 
 func parse_proc_decl(set *Token_Set, scope *Scope) bool {
 	set.commas_and_parens_as_semis = true
+	/* checking for return variables */
 	parse_variable_decl(set, scope)
 	inc(set)
 	inc(set)
+	//scope.returns = scope.decls
+	//scope.decls = make(a new map etc)
+
+	/* checking for left variables */
 	parse_variable_decl(set, scope)
 	inc(set)
+	//scope.left_args = scope.decls
+	//scope.decls = make(a new map etc)
+
+	/* registering function name */
 	inc(set)
+
+	/* checking for right variables */
 	inc(set)
 	parse_variable_decl(set, scope)
 	inc(set)
+	//scope.right_args = scope.decls
+	//scope.decls = make(a new map etc)
 
 	set.commas_and_parens_as_semis = false
 	// parse_proc_block(set, scope)

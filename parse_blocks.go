@@ -12,22 +12,28 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 	ok := true
 
 	statloop: for ; !set.end ; inc(set) {
-//		print_error_line("where are we", set)
+		// print_error_line("where are we", set)
 		token := curr(set)
 
 		/* special cases */
 		switch token.tag {
 		case DIRECTIVE_LBL:
 			inc(set)
-			if _, exists := scope.assembly.label_defs[token_str(set)]; exists {
+			if _, exists := scope.label_defs[token_str(set)]; exists {
 				ok = false
-				/* TODO: print where the label was defined */
+				/* TODO: print where the existing label was defined */
 				print_error_line("This label already exists", set)
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
-			scope.assembly.label_defs[token_str(set)] = len(scope.assembly.instructions)
-			ok = finish_statement(set)
+			var instruction Asm_Instruction
+			instruction.mnemonic = prev(set);
+			instruction.alignment = 8;
+			instruction.args[0].verbatim = curr(set);
+			scope.label_defs[token_str(set)] = len(scope.assembly.instructions)
+			scope.assembly.instructions = append(scope.assembly.instructions, instruction)
+
+			if !finish_statement(inc(set)) { ok = false }
 			if single_statement { break statloop } else { continue statloop }
 		case KEYWORD_CLOSE_BRACE: break statloop
 		}
@@ -62,7 +68,15 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			/* a label as argument */
 			case DIRECTIVE_LBL:
 				inc(set)
-				scope.assembly.label_uses = append(scope.assembly.label_uses, len(scope.assembly.instructions))
+				if arg_nr == 0 {
+					alignment_of_instruction = 8
+				} else if alignment_of_instruction != 8 {
+					print_error_line("A label has an alignment of 8, which is not the same as the alignment used in this instruction", set);
+					skip_statement(set)
+					if single_statement { break statloop } else { continue statloop }
+				}
+				instruction.args[arg_nr].verbatim = curr(set)
+				instruction.args[arg_nr].verbatim.tag = DIRECTIVE_LBL
 
 			/* a register as argument */
 			case DIRECTIVE_REG_BYTE, DIRECTIVE_REG_WORD, DIRECTIVE_REG_DOUB, DIRECTIVE_REG_QUAD, DIRECTIVE_REG_OCTO:

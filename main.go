@@ -106,9 +106,7 @@ func main() {
 		types : make(map[string]Type_Index),
 		enums : make(map[string]Enum_Des),
 		decls : make(map[string]Decl_Des),
-		assembly : Asm_Block{
-			label_defs : make(map[string]int),
-		},
+		label_defs : make(map[string]int),
 	}
 	set := Token_Set {
 		index : 0,
@@ -155,11 +153,11 @@ func main() {
 	for name, enum := range global_scope.enums { fmt.Println(name, enum) }
 	for name, value := range enum_values { fmt.Println(name, value) }
 	fmt.Println()/*
-*/	for name, decl := range global_scope.decls { fmt.Println(name, decl) }/*
+	for name, decl := range global_scope.decls { fmt.Println(name, decl) }/*
 	fmt.Println(all_values)
 */
 	if error_count == 0 {
-		full_asm, _ := generate_assembly(&global_scope, &set)
+		full_asm, _ := generate_assembly(&global_scope, &set, "entry")
 		// fmt.Println(full_asm)
 		err = os.WriteFile("asm/test.nasm", []byte(full_asm), 0666)
 		if err != nil {
@@ -204,6 +202,10 @@ func is_digit(char rune) bool {
 
 func is_alphabetic(char rune) bool {
 	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char == '_')
+}
+
+func prev(set *Token_Set) Token {
+	return set.tokens[set.index-1]
 }
 
 func curr(set *Token_Set) Token {

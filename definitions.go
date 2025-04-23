@@ -1,18 +1,18 @@
 package main
 
 type Scope struct {
-//	prev_scope *Scope
+	prev_scope *Scope
 	types map[string]Type_Index
 	enums map[string]Enum_Des
 	decls map[string]Decl_Des
+	label_defs map[string]int
+	procs map[string]Scope
 //	imports map[string]*Scope
 	assembly Asm_Block
 }
 
 type Asm_Block struct {
 	instructions []Asm_Instruction
-	label_defs map[string]int
-	label_uses []int
 }
 
 /* this'd be sized [4][8]byte */
@@ -170,6 +170,7 @@ const (
 			DIRECTIVE_REG_DOUB
 			DIRECTIVE_REG_QUAD
 			DIRECTIVE_REG_OCTO
+			DIRECTIVE_REG
 		DIRECTIVE_REGS_END
 
 		DIRECTIVE_LBL
