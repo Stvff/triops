@@ -6,89 +6,54 @@ global _start
 section .text
 _start:
 	; Triops: Global variable intialization
-	sub rsp, 112; Triops: This is the size of all variables on the stack
+	sub rsp, 64; Triops: This is the size of all variables on the stack
 
 	; Triops: init `greet`
 	mov qword [rsp + 0], vardata.greet + 8
 	mov qword [rsp + 8], 7
 
-	; Triops: init `hellos`
-	mov qword [rsp + 16], vardata.hellos + 66
-	mov qword [rsp + 24], 4
-
-	; Triops: init `aaa`
-	mov qword [rsp + 32], vardata.aaa + 156
-	mov qword [rsp + 40], 2
-
-	; Triops: init `D`
-	mov qword [rsp + 48], 0; Triops: zero init
-	mov qword [rsp + 56], 0; Triops: zero init
-
 	; Triops: init `data`
-	mov qword [rsp + 64], 0; Triops: zero init
+	mov qword [rsp + 16], 0; Triops: zero init
 
 	; Triops: init `length`
-	mov qword [rsp + 72], 0; Triops: zero init
+	mov qword [rsp + 24], 0; Triops: zero init
 
 	; Triops: init `system_function`
-	mov qword [rsp + 80], 0; Triops: zero init
+	mov qword [rsp + 32], 0; Triops: zero init
 
 	; Triops: init `stream`
-	mov qword [rsp + 88], 0; Triops: zero init
+	mov qword [rsp + 40], 0; Triops: zero init
 
 	; Triops: init `error_code`
-	mov qword [rsp + 96], 0; Triops: zero init
+	mov qword [rsp + 48], 0; Triops: zero init
 
 	; Triops: User code
 	; Triops: binding data
-	mov rsi,  [rsp + 64]
+	mov rsi,  [rsp + 16]
 
 	; Triops: binding length
-	mov rdx,  [rsp + 72]
+	mov rdx,  [rsp + 24]
 
 	; Triops: binding system_function
-	mov rax,  [rsp + 80]
+	mov rax,  [rsp + 32]
 
 	; Triops: binding stream
-	mov rdi,  [rsp + 88]
+	mov rdi,  [rsp + 40]
 
 	mov rsi, qword [rsp + 0 + 0]
 	mov rdx, qword [rsp + 0 + 8]
 	mov rax, 1
 	mov rdi, 1
 	syscall
-	call entry.function
 	; Triops: binding error_code
-	mov rdi,  [rsp + 96]
+	mov rdi,  [rsp + 48]
 
 	mov rax, 60
 	mov rdi, 0
 	syscall
-	
-	entry.function:
-	push 6
-	push entry.smolstring
-	mov rsi, qword [rsp + 0]
-	mov rdx, qword [rsp + 8]
-	mov rax, 1
-	mov rdi, 2
-	syscall
-	call entry.function2
-	add rsp, 16
-	ret
-	
-	entry.function2:
-	mov rax, 1
-	mov rdi, 2
-	syscall
-	ret
-	
-	entry.smolstring:
-	db 69, 69, 69
-	db 69, 69, 10
 
 	; Triops: leaving the stack as I found it
-	add rsp, 112; Triops: This was the size of all variables on the stack
+	add rsp, 64; Triops: This was the size of all variables on the stack
 
 	; Triops: Adding the unix exit, in case the user doesn't add one
 	mov rax, 60; Triops: 60 is exit
@@ -99,48 +64,4 @@ section .data
 	vardata.greet:
 		dq 0; Triops: Dynamic array, depth: 0
 		db 83, 97, 105, 108, 111, 114, 10
-
-	vardata.hellos:
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 101, 108, 108, 111, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 101, 121, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 97, 105, 105, 105, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 103, 114, 101, 101, 116, 105, 110, 103, 115, 10
-
-		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
-		dq vardata.hellos + 8, 6
-		dq vardata.hellos + 22, 4
-		dq vardata.hellos + 34, 6
-		dq vardata.hellos + 48, 10
-
-	vardata.aaa:
-		dq 0; Triops: Dynamic array, depth: 2
-		db 104
-
-		dq 0; Triops: Dynamic array, depth: 2
-		db 104, 97, 97, 97
-
-		dq 0; Triops: Dynamic array, depth: 2
-		db 104, 111, 111, 104, 111, 111, 111
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.aaa + 8, 1
-		dq vardata.aaa + 17, 4
-		dq vardata.aaa + 29, 7
-
-		dq 0; Triops: Dynamic array, depth: 2
-		db 104, 97, 105, 97, 97, 105, 97, 97
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.aaa + 44, 3
-		dq vardata.aaa + 100, 8
-
-		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
-		dq vardata.aaa + 116, 1
 

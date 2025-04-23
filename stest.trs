@@ -1,32 +1,10 @@
 type char is 1 bytes;
 type int is 8 bytes;
-type s32 is 4 bytes;
 
 char[] greet = "Sailor\n";
 
-char[][] hellos = {
-	"hello\n", "hey\n", "haiii\n", "greetings\n"
-};
-
-char[][][] aaa = {
-	{"h", "haaa", "hoohooo"}, {"haiaaiaa"}
-};
-
-
-## (int A) (int B) write (int C, int F, int D = 10);
-
-int[] D;
-
 enum int syscalls {write = 1, exit = 60};
 enum int streams { In, out, err };
-
-#*
-TODO:
-	Bind variables to registers
-	Fix up labels (it doesn't recognize when labels are incorrect or unknown (do remember you can define future labels)
-	Give an error on unrecognized directives (even in asm blocks?)
-	More funcs!
-*#
 
 char[0] data;
 int length;
@@ -42,39 +20,26 @@ entry {
 
 	mov data, greet[0];
 	mov length, greet[1];
-
 	mov system_function, syscalls.write;
 	mov stream, streams.out;
 	syscall;
-
-	call #lbl function;
 
 	#reg error_code = rdi;
 	mov system_function, syscalls.exit;
 	mov error_code, 0;
 	syscall;
-
-	#lbl function;
-		push 6;
-		push #lbl smolstring;
-
-		mov data, #rq rsp[0];
-		mov length, #rq rsp[1];
-	
-		mov system_function, syscalls.write;
-		mov stream, streams.err;
-		syscall;
-		call #lbl function2;
-		add #rq rsp, 16;
-	ret;
-
-	#lbl function2;
-		mov system_function, syscalls.write;
-		mov stream, streams.err;
-		syscall;
-	ret;
-
-	#lbl smolstring;
-	db 69, 69, 69;
-	db 69, 69, 10;
 }
+
+#*
+char[][] hellos = {
+	"hello\n", "hey\n", "haiii\n", "greetings\n"
+};
+
+char[][][] aaa = {
+	{"h", "haaa", "hoohooo"}, {"haiaaiaa"}
+};
+
+## (int A) (int B) write (int C, int F, int D = 10);
+
+int[] D;
+*#
