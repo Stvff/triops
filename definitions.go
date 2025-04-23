@@ -1,12 +1,17 @@
 package main
 
+var (
+	all_types  []Type_Index
+	all_enums  []Enum_Des
+	all_decls  []Decl_Des
+	all_labels []int
+	all_procs  []Scope
+)
+
 type Scope struct {
 	prev_scope *Scope
-	types map[string]Type_Index
-	enums map[string]Enum_Des
-	decls map[string]Decl_Des
-	label_defs map[string]int
-	procs map[string]Scope
+	names []What
+	label_uses []Token
 //	imports map[string]*Scope
 	assembly Asm_Block
 }
@@ -44,6 +49,22 @@ type Decl_Des struct {
 	typ Type_Index
 	init Value
 }
+
+type What struct {
+	name string
+	named_thing Named_Thing;
+	index int;
+}
+type Named_Thing int;
+const (
+	NAME_NOT_HERE = 0
+	NAME_TYPE = 1 + iota
+	NAME_ENUM
+	NAME_DECL
+	NAME_LABEL
+	NAME_PROC
+	NAME_REGBINDING
+)
 
 type Token_Tag int16
 var keywords = map[string]Token_Tag {
@@ -100,6 +121,7 @@ var keywords = map[string]Token_Tag {
 	"#rd" : DIRECTIVE_REG_DOUB,
 	"#rq" : DIRECTIVE_REG_QUAD,
 	"#ro" : DIRECTIVE_REG_OCTO,
+	"#reg": DIRECTIVE_REG,
 
 	"#lbl" : DIRECTIVE_LBL,
 

@@ -102,12 +102,7 @@ func main() {
 		}
 	}
 
-	global_scope := Scope{
-		types : make(map[string]Type_Index),
-		enums : make(map[string]Enum_Des),
-		decls : make(map[string]Decl_Des),
-		label_defs : make(map[string]int),
-	}
+	var global_scope Scope
 	set := Token_Set {
 		index : 0,
 		text : full_text,
@@ -140,6 +135,13 @@ func main() {
 		case KEYWORD_ASM: fallthrough
 		case KEYWORD_ENTRY:
 			if !parse_asm(&set, &global_scope) { error_count += 1 }
+			for _, lbl_token := range global_scope.label_uses {
+				this := where_is(&global_scope, token_txt_str(lbl_token, set.text))
+				if this.named_thing != NAME_LABEL {
+					print_error_line("Usage of a label that doesn't exist", &set)
+					error_count += 1
+				}
+			}
 		default:
 			print_error_line("Unexpected toplevel token", &set)
 			skip_statement(&set)
@@ -227,4 +229,33 @@ func dec(set *Token_Set) *Token_Set {
 	set.index = max(set.index - 1, 0)
 //	fmt.Print("\"", token_str(set), "\"d", set.braces, ", ")
 	return set
+}
+
+func where_is(scope *Scope, name string) What {
+	for _, what := range scope.names {
+		if what.name == name {
+			return what
+		}
+	}
+	return What{"", NAME_NOT_HERE, 0}
+}
+
+func add_type_to_scope(scope *Scope, name string, ti Type_Index) {
+	all_types = append(all_types, ti)
+	scope.names = append(scope.names, What{name, NAME_TYPE, len(all_types)-1})
+}
+
+func add_enum_to_scope(scope *Scope, name string, enum_des Enum_Des) {
+	all_enums = append(all_enums, enum_des)
+	scope.names = append(scope.names, What{name, NAME_ENUM, len(all_enums)-1})
+}
+
+func add_decl_to_scope(scope *Scope, name string, decl_des Decl_Des) {
+	all_decls = append(all_decls, decl_des)
+	scope.names = append(scope.names, What{name, NAME_DECL, len(all_decls)-1})
+}
+
+func add_label_to_scope(scope *Scope, name string, place int) {
+	all_labels = append(all_labels, place)
+	scope.names = append(scope.names, What{name, NAME_LABEL, len(all_labels)-1})
 }

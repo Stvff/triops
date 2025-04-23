@@ -101,10 +101,12 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 }
 
 func parse_type(set *Token_Set, scope *Scope) (ti Type_Index, exists bool) {
-	ti, exists = scope.types[token_str(set)]
+	this := where_is(scope, token_str(set))
+	exists = this.named_thing == NAME_TYPE
 	if !exists {
 		return ti, exists
 	}
+	ti = all_types[this.index]
 	inc(set)
 
 	for curr(set).tag == KEYWORD_OPEN_BRACKET && !set.end{
@@ -145,15 +147,14 @@ func resolve_enum_value(set *Token_Set, scope *Scope) (value Value, typ Type_Ind
 		return value, typ, false
 	}
 	enum_name := token_str(set)
-	var (
-		enum Enum_Des
-		evid Enum_Value_ID
-	)
-	enum, exists = scope.enums[enum_name]
+	this := where_is(scope, enum_name)
+	exists = this.named_thing == NAME_ENUM
 	if !exists {
 		return value, typ, false
 	}
+	enum := all_enums[this.index]
 	typ = enum.typ
+	var evid Enum_Value_ID
 	evid.parent_id = enum.id
 	evid.name = "#"
 	value, exists = enum_values[evid]
@@ -239,23 +240,23 @@ func resolve_string_value(set *Token_Set, scope *Scope) (value Value, exists boo
 
 func validate_name(set *Token_Set, scope *Scope) bool {
 	name_str := token_str(set)
+	
 	if curr(set).tag != NONE {
 		print_error_line("Name must not be a number, string or language keyword", set)
 		return false
 	}
-	if _, exists := scope.decls[name_str]; exists {
-		print_error_line("Name was already declared as variable", set)
-		return false
-	}
-	if _, exists := scope.types[name_str]; exists {
-		print_error_line("Name was already declared as type", set)
-		return false
-	}
-	if _, exists := scope.enums[name_str]; exists {
-		print_error_line("Name was already declared as enum", set)
+	this := where_is(scope, name_str);
+	if this.named_thing != NAME_NOT_HERE {
+		/* TODO: print where the it was defined */
+		things_it_could_be_defined_as := []string{"a type", "an enum", "a variable", "a label", "a procedure"}
+		printf_error_line(set, "Name was already declared as %s", things_it_could_be_defined_as[this.named_thing-NAME_TYPE])
 		return false
 	}
 	return true
+}
+
+func printf_error_line(set *Token_Set, message string, args ...any) {
+	print_error_line(fmt.Sprintf(message, args...), set)
 }
 
 func print_error_line(message string, set *Token_Set) {

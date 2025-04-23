@@ -18,21 +18,41 @@ char[][][] aaa = {
 int[] D;
 
 enum int syscalls {write = 1, exit = 60};
-enum int stream { In, out, err };
+enum int streams { In, out, err };
 
 #*
 TODO:
+	Bind variables to registers
 	Fix up labels (it doesn't recognize when labels are incorrect or unknown (do remember you can define future labels)
-	I'd like to have better register directives #r<0-15><b-w-d->
+	Give an error on unrecognized directives (even in asm blocks?)
 	More funcs!
 *#
 
+char[0] data;
+int length;
+int system_function;
+int stream;
+
 entry {
+#*
+	#reg data = rsi;
+	#reg length = rdx;
+	#reg system_function = rax;
+	#reg stream = rdi;
+
+	mov data, greet[0];
+	mov length, greet[1];
+
+	mov system_function, syscalls.write;
+	mov stream, streams.out;
+	syscall;
+*#
+
 	mov #rq rsi, greet[0];
 	mov #rq rdx, greet[1];
 
 	mov #rq rax, syscalls.write;
-	mov #rq rdi, stream.out;
+	mov #rq rdi, streams.out;
 	syscall;
 
 	call #lbl function;
@@ -43,13 +63,13 @@ entry {
 
 	#lbl function;
 		push 6;
-		push #lbl data;
+		push #lbl smolstring;
 
 		mov #rq rsi, #rq rsp[0];
 		mov #rq rdx, #rq rsp[1];
 	
 		mov #rq rax, syscalls.write;
-		mov #rq rdi, stream.err;
+		mov #rq rdi, streams.err;
 		syscall;
 		call #lbl function2;
 		add #rq rsp, 16;
@@ -57,11 +77,11 @@ entry {
 
 	#lbl function2;
 		mov #rq rax, syscalls.write;
-		mov #rq rdi, stream.err;
+		mov #rq rdi, streams.err;
 		syscall;
 	ret;
 
-	#lbl data;
+	#lbl smolstring;
 	db 69, 69, 69;
 	db 69, 69, 10;
 }

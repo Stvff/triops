@@ -6,19 +6,7 @@ global _start
 section .text
 _start:
 	; Triops: Global variable intialization
-	sub rsp, 80; Triops: This is the size of all variables on the stack
-
-	; Triops: init `aaa`
-	mov qword [rsp + 32], vardata.aaa + 156
-	mov qword [rsp + 40], 2
-
-	; Triops: init `example`
-	mov qword [rsp + 48], vardata.example + 172
-	mov qword [rsp + 56], 2
-
-	; Triops: init `dip`
-	mov qword [rsp + 64], vardata.dip + 1458
-	mov qword [rsp + 72], 4
+	sub rsp, 96; Triops: This is the size of all variables on the stack
 
 	; Triops: init `greet`
 	mov qword [rsp + 0], vardata.greet + 8
@@ -28,21 +16,58 @@ _start:
 	mov qword [rsp + 16], vardata.hellos + 66
 	mov qword [rsp + 24], 4
 
+	; Triops: init `aaa`
+	mov qword [rsp + 32], vardata.aaa + 156
+	mov qword [rsp + 40], 2
+
+	; Triops: init `D`
+	mov qword [rsp + 48], 0; Triops: zero init
+	mov qword [rsp + 56], 0; Triops: zero init
+
+	; Triops: init `data`
+	mov qword [rsp + 64], 0; Triops: zero init
+
+	; Triops: init `length`
+	mov qword [rsp + 72], 0; Triops: zero init
+
+	; Triops: init `system_function`
+	mov qword [rsp + 80], 0; Triops: zero init
+
+	; Triops: init `stream`
+	mov qword [rsp + 88], 0; Triops: zero init
+
 	; Triops: User code
 	mov rsi, qword [rsp + 0 + 0]
 	mov rdx, qword [rsp + 0 + 8]
 	mov rax, 1
 	mov rdi, 1
 	syscall
-	mov rax, qword [rsp + 16 + 0]
-	mov rsi, qword [rax + 32]
-	mov rdx, qword [rax + 40]
-	mov rax, 1
-	mov rdi, 1
+	call entry.function
+	mov rax, 60
+	mov rdi, 0
 	syscall
+	entry.function:
+	push 6
+	push entry.smolstring
+	mov rsi, qword [rsp + 0]
+	mov rdx, qword [rsp + 8]
+	mov rax, 1
+	mov rdi, 2
+	syscall
+	call entry.function2
+	add rsp, 16
+	ret
+	entry.function2:
+	mov rax, 1
+	mov rdi, 2
+	syscall
+	ret
+	entry.smolstring:
+	db 69, 69, 69
+	db 69, 69, 10
 
 	; Triops: leaving the stack as I found it
-	add rsp, 80; Triops: This was the size of all variables on the stack
+	add rsp, 96; Triops: This was the size of all variables on the stack
 
 	; Triops: Adding the unix exit, in case the user doesn't add one
 	mov rax, 60; Triops: 60 is exit
@@ -50,6 +75,29 @@ _start:
 	syscall
 
 section .data
+	vardata.greet:
+		dq 0; Triops: Dynamic array, depth: 0
+		db 83, 97, 105, 108, 111, 114, 10
+
+	vardata.hellos:
+		dq 0; Triops: Dynamic array, depth: 1
+		db 104, 101, 108, 108, 111, 10
+
+		dq 0; Triops: Dynamic array, depth: 1
+		db 104, 101, 121, 10
+
+		dq 0; Triops: Dynamic array, depth: 1
+		db 104, 97, 105, 105, 105, 10
+
+		dq 0; Triops: Dynamic array, depth: 1
+		db 103, 114, 101, 101, 116, 105, 110, 103, 115, 10
+
+		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
+		dq vardata.hellos + 8, 6
+		dq vardata.hellos + 22, 4
+		dq vardata.hellos + 34, 6
+		dq vardata.hellos + 48, 10
+
 	vardata.aaa:
 		dq 0; Triops: Dynamic array, depth: 2
 		db 104
@@ -74,249 +122,4 @@ section .data
 
 		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
 		dq vardata.aaa + 116, 1
-
-	vardata.example:
-		dq 0; Triops: Dynamic array, depth: 2
-		dd 97, 97, 97
-
-		dq 0; Triops: Dynamic array, depth: 2
-		dd 98, 98
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.example + 8, 3
-		dq vardata.example + 28, 2
-
-		dq 0; Triops: Dynamic array, depth: 2
-		dd 99
-
-		dq 0; Triops: Dynamic array, depth: 2
-		dd 100, 100, 100
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.example + 44, 2
-		dq vardata.example + 84, 1
-		dq vardata.example + 96, 3
-
-		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
-		dq vardata.example + 116, 2
-
-	vardata.dip:
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 99, 98, 97
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 96, 95, 94
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 8, 3
-		dq vardata.dip + 22, 3
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 93, 92
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 91, 90, 89
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 88
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 36, 2
-		dq vardata.dip + 76, 2
-		dq vardata.dip + 88, 3
-		dq vardata.dip + 102, 1
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 87
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 86, 85, 84, 83
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 82, 81, 80
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 112, 3
-		dq vardata.dip + 184, 1
-		dq vardata.dip + 194, 4
-		dq vardata.dip + 210, 3
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.dip + 224, 3
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 79, 78, 77
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 76, 75, 74, 73
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 72
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 296, 3
-		dq vardata.dip + 320, 3
-		dq vardata.dip + 334, 4
-		dq vardata.dip + 350, 1
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 71, 70, 69
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 68, 67, 66
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 360, 3
-		dq vardata.dip + 432, 3
-		dq vardata.dip + 446, 3
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.dip + 460, 2
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 65
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 516, 2
-		dq vardata.dip + 540, 1
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 64, 63
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 62, 61
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 550, 1
-		dq vardata.dip + 590, 2
-		dq vardata.dip + 602, 2
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 60, 59, 58
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 57, 56, 55
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 54, 53, 52
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 614, 2
-		dq vardata.dip + 670, 3
-		dq vardata.dip + 684, 3
-		dq vardata.dip + 698, 3
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 51, 50, 49, 48
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 47, 46, 45, 44
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 43, 42, 41, 40
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 39, 38, 37, 36
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 712, 3
-		dq vardata.dip + 784, 4
-		dq vardata.dip + 800, 4
-		dq vardata.dip + 816, 4
-		dq vardata.dip + 832, 4
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.dip + 848, 4
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 35, 34, 33, 32
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 31, 30, 29
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 28, 27, 26
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 25, 24
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 936, 4
-		dq vardata.dip + 960, 4
-		dq vardata.dip + 976, 3
-		dq vardata.dip + 990, 3
-		dq vardata.dip + 1004, 2
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 23, 22, 21
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 20, 19
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 19, 18
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 1016, 4
-		dq vardata.dip + 1104, 3
-		dq vardata.dip + 1118, 2
-		dq vardata.dip + 1130, 2
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 17, 16
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 15, 14
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 1142, 3
-		dq vardata.dip + 1214, 2
-		dq vardata.dip + 1226, 2
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 13, 12, 11
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 1238, 2
-		dq vardata.dip + 1294, 3
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 10, 9, 8
-
-		dq 0; Triops: Dynamic array, depth: 3
-		dw 7, 6, 5, 4
-
-		dq 0; Triops: Dynamic array, depth: 2, last_depth: 3
-		dq vardata.dip + 1308, 1
-		dq vardata.dip + 1348, 3
-		dq vardata.dip + 1362, 4
-
-		dq 0; Triops: Dynamic array, depth: 1, last_depth: 2
-		dq vardata.dip + 1378, 2
-
-		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
-		dq vardata.dip + 1434, 5
-
-	vardata.greet:
-		dq 0; Triops: Dynamic array, depth: 0
-		db 83, 97, 105, 108, 111, 114, 10
-
-	vardata.hellos:
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 101, 108, 108, 111, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 101, 121, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 104, 97, 105, 105, 105, 10
-
-		dq 0; Triops: Dynamic array, depth: 1
-		db 103, 114, 101, 101, 116, 105, 110, 103, 115, 10
-
-		dq 0; Triops: Dynamic array, depth: 0, last_depth: 1
-		dq vardata.hellos + 8, 6
-		dq vardata.hellos + 22, 4
-		dq vardata.hellos + 34, 6
-		dq vardata.hellos + 48, 10
 

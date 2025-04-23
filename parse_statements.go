@@ -34,7 +34,8 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 	var new_decl Decl_Des
 	/* checking type */
 	// print_error_line("Decl?", set)
-	_, exists := scope.types[token_str(set)]
+	this := where_is(scope, token_str(set))
+	exists := this.named_thing == NAME_TYPE
 	if !exists {
 		return false
 	}
@@ -50,7 +51,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 
 	/* checking if there's an init constant */
 	if curr(set).tag != KEYWORD_EQUALS {
-		scope.decls[name] = new_decl
+		add_decl_to_scope(scope, name, new_decl)
 		return finish_statement(set)
 	}
 	inc(set)
@@ -61,7 +62,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 	if !exists {
 		return skip_statement(set)
 	}
-	scope.decls[name] = new_decl
+	add_decl_to_scope(scope, name, new_decl)
 
 	return finish_statement(set)
 }
@@ -94,20 +95,20 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 			case TYPE_BARE:
 				new_type = bare_types[i]
 				new_type.name = name
-				scope.types[new_type.name] = append_bare_type(new_type)
+				add_type_to_scope(scope, new_type.name, append_bare_type(new_type))
 			case TYPE_INDIRECT:
 				indirect_type := indirect_types[i]
 				i_indir, tag_indir := unpack_ti(indirect_type.target)
 				if tag_indir == TYPE_BARE {
 					new_type = bare_types[i_indir]
 					new_type.name = name
-					scope.types[new_type.name] = append_bare_type(new_type)
+					add_type_to_scope(scope, new_type.name, append_bare_type(new_type))
 					return finish_statement(set)
 				}
 				indirect_type.name = name
-				scope.types[indirect_type.name] = append_indirect_type(indirect_type)
+				add_type_to_scope(scope, indirect_type.name, append_indirect_type(indirect_type))
 			default:
-				scope.types[name] = append_indirect_type(Type_Des_Indirect{name, ti})
+				add_type_to_scope(scope, name, append_indirect_type(Type_Des_Indirect{name, ti}))
 		}
 		return finish_statement(set)
 	}
@@ -148,7 +149,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 
 	/* deciding if that was all or not */
 	if curr(set).tag == KEYWORD_SEMICOLON {
-		scope.types[new_type.name] = append_bare_type(new_type)
+		add_type_to_scope(scope, new_type.name, append_bare_type(new_type))
 		return true
 	}
 
@@ -181,7 +182,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 
 	/* deciding if that was all or not */
 	if curr(set).tag == KEYWORD_SEMICOLON {
-		scope.types[new_type.name] = append_bare_type(new_type)
+		add_type_to_scope(scope, new_type.name, append_bare_type(new_type))
 		return true
 	}
 
@@ -193,7 +194,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	}
 	inc(set)
 
-	scope.types[new_type.name] = append_bare_type(new_type)
+	add_type_to_scope(scope, new_type.name, append_bare_type(new_type))
 	return finish_statement(set)
 }
 
@@ -219,7 +220,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	inc(set)
 
 	/* registering the enum */
-	scope.enums[name] = Enum_Des{typ, global_enum_id}
+	add_enum_to_scope(scope, name, Enum_Des{typ, global_enum_id})
 	evid.parent_id = global_enum_id
 	global_enum_id += 1
 

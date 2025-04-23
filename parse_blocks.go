@@ -19,10 +19,8 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 		switch token.tag {
 		case DIRECTIVE_LBL:
 			inc(set)
-			if _, exists := scope.label_defs[token_str(set)]; exists {
+			if !validate_name(set, scope) {
 				ok = false
-				/* TODO: print where the existing label was defined */
-				print_error_line("This label already exists", set)
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
@@ -30,7 +28,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			instruction.mnemonic = prev(set);
 			instruction.alignment = 8;
 			instruction.args[0].verbatim = curr(set);
-			scope.label_defs[token_str(set)] = len(scope.assembly.instructions)
+			add_label_to_scope(scope, token_str(set), len(scope.assembly.instructions))
 			scope.assembly.instructions = append(scope.assembly.instructions, instruction)
 
 			if !finish_statement(inc(set)) { ok = false }
@@ -77,6 +75,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				}
 				instruction.args[arg_nr].verbatim = curr(set)
 				instruction.args[arg_nr].verbatim.tag = DIRECTIVE_LBL
+				scope.label_uses = append(scope.label_uses, curr(set))
 
 			/* a register as argument */
 			case DIRECTIVE_REG_BYTE, DIRECTIVE_REG_WORD, DIRECTIVE_REG_DOUB, DIRECTIVE_REG_QUAD, DIRECTIVE_REG_OCTO:
@@ -122,10 +121,12 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				}
 				instruction.args[arg_nr].immediate = integer_to_value(integer)
 
-			/* Variable or enum */
+			/* Variable, (label?), or enum */
 			case NONE:
-				decl, dexists := scope.decls[token_str(set)]
-				if dexists {
+				this := where_is(scope, token_str(set))
+				switch this.named_thing {
+					case NAME_DECL:
+					decl := all_decls[this.index]
 					if arg_nr == 0 {
 						alignment_of_instruction = align_of_type(decl.typ)
 					} else if align_of_type(decl.typ) != alignment_of_instruction {
@@ -135,7 +136,10 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 						if single_statement { break statloop } else { continue statloop }
 					}
 					instruction.args[arg_nr].verbatim = curr(set)
-				} else {
+
+					case NAME_LABEL: /* this can't really happen like this because they might be declared later */
+
+					default:
 					old_index := set.index
 					value, enum_typ, vexists := resolve_enum_value(set, scope)
 					if vexists && align_of_type(enum_typ) != alignment_of_instruction {

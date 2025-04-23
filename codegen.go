@@ -40,7 +40,10 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string,
 	addf(&nasm.text_sec, "\t; Triops: Global variable intialization\n")
 
 	nasm.var_poss = make(map[string]Var_Pos)
-	for name, decl := range scope.decls {
+	for _, this := range scope.names {
+		if this.named_thing != NAME_DECL { continue }
+		name := this.name
+		decl := all_decls[this.index]
 		/* logs its existence on the stack */
 		amount := amount_of_type(decl.typ)
 		align := align_of_type(decl.typ)
@@ -79,8 +82,9 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string,
 	// fmt.Println(nasm.stack_offsets)
 	addf(&nasm.text_sec, "\tsub rsp, %v; Triops: This is the size of all variables on the stack\n", nasm.stack_offsets[5])
 
-	for name, decl := range scope.decls {
-		gen_init_decl(&nasm, decl, name)
+	for _, this := range scope.names {
+		if this.named_thing != NAME_DECL { continue }
+		gen_init_decl(&nasm, all_decls[this.index], this.name)
 	}
 
 	addf(&nasm.text_sec, "\n\t; Triops: User code\n")
