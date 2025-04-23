@@ -18,6 +18,7 @@ type Scope struct {
 
 type Asm_Block struct {
 	instructions []Asm_Instruction
+	vars_with_bound_regs []int
 }
 
 /* this'd be sized [4][8]byte */
@@ -48,6 +49,7 @@ type Enum_Value_ID struct {
 type Decl_Des struct {
 	typ Type_Index
 	init Value
+	bound_register Token
 }
 
 type What struct {
@@ -63,7 +65,6 @@ const (
 	NAME_DECL
 	NAME_LABEL
 	NAME_PROC
-	NAME_REGBINDING
 )
 
 type Token_Tag int16

@@ -37,6 +37,23 @@ _start:
 	mov qword [rsp + 88], 0; Triops: zero init
 
 	; Triops: User code
+	; Triops: binding data
+	mov rsi,  [rsp + 64]
+
+	; Triops: binding length
+	mov rdx,  [rsp + 72]
+
+	; Triops: binding system_function
+	mov rax,  [rsp + 80]
+
+	; Triops: binding stream
+	mov rdi,  [rsp + 88]
+
+	mov rsi, qword [rsp + 0 + 0]
+	mov rdx, qword [rsp + 0 + 8]
+	mov rax, 1
+	mov rdi, 1
+	syscall
 	mov rsi, qword [rsp + 0 + 0]
 	mov rdx, qword [rsp + 0 + 8]
 	mov rax, 1
@@ -46,6 +63,7 @@ _start:
 	mov rax, 60
 	mov rdi, 0
 	syscall
+	
 	entry.function:
 	push 6
 	push entry.smolstring
@@ -57,11 +75,13 @@ _start:
 	call entry.function2
 	add rsp, 16
 	ret
+	
 	entry.function2:
 	mov rax, 1
 	mov rdi, 2
 	syscall
 	ret
+	
 	entry.smolstring:
 	db 69, 69, 69
 	db 69, 69, 10

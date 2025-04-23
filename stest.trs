@@ -34,7 +34,6 @@ int system_function;
 int stream;
 
 entry {
-#*
 	#reg data = rsi;
 	#reg length = rdx;
 	#reg system_function = rax;
@@ -46,7 +45,6 @@ entry {
 	mov system_function, syscalls.write;
 	mov stream, streams.out;
 	syscall;
-*#
 
 	mov #rq rsi, greet[0];
 	mov #rq rdx, greet[1];

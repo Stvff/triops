@@ -33,8 +33,44 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 
 			if !finish_statement(inc(set)) { ok = false }
 			if single_statement { break statloop } else { continue statloop }
+		case DIRECTIVE_REG:
+			inc(set)
+			this := where_is(scope, token_str(set))
+			if this.named_thing != NAME_DECL {
+				print_error_line("Expected a valid variable to bind a register to", set);
+				ok = false
+				skip_statement(set)
+				if single_statement { break statloop } else { continue statloop }
+			}
+			var instruction Asm_Instruction
+			instruction.mnemonic = prev(set)
+
+			associated_decl := all_decls[this.index]
+			if size_of_type(associated_decl.typ) > 8 {
+				print_error_line("Total size of the variable to be bound must be less than 8 bytes", set)
+				ok = false
+				skip_statement(set)
+				if single_statement { break statloop } else { continue statloop }
+			}
+			instruction.args[0].verbatim = curr(set)
+
+			inc(set)
+			if curr(set).tag != KEYWORD_EQUALS {
+				print_error_line("Expected an `=`", set)
+				ok = false
+				skip_statement(set)
+				if single_statement { break statloop } else { continue statloop }
+			}
+			inc(set)
+			all_decls[this.index].bound_register = curr(set)
+			instruction.args[1].verbatim = curr(set)
+			scope.assembly.instructions = append(scope.assembly.instructions, instruction)
+			
+			if !finish_statement(inc(set)) { ok = false }
+			if single_statement { break statloop } else { continue statloop }
 		case KEYWORD_CLOSE_BRACE: break statloop
 		}
+				
 
 		/* produce instruction */
 		var instruction Asm_Instruction
@@ -136,8 +172,6 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 						if single_statement { break statloop } else { continue statloop }
 					}
 					instruction.args[arg_nr].verbatim = curr(set)
-
-					case NAME_LABEL: /* this can't really happen like this because they might be declared later */
 
 					default:
 					old_index := set.index

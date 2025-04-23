@@ -9,6 +9,7 @@ import (
 type Var_Pos struct {
 	l2_alignment int
 	index int
+	reg string
 }
 
 var l2_to_align = [5]int{1, 2, 4, 8, 16}
@@ -44,24 +45,25 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string,
 		if this.named_thing != NAME_DECL { continue }
 		name := this.name
 		decl := all_decls[this.index]
+		bound_reg := token_txt_str(decl.bound_register, set.text)
 		/* logs its existence on the stack */
 		amount := amount_of_type(decl.typ)
 		align := align_of_type(decl.typ)
 		switch align {
 		case 1:
-			nasm.var_poss[name] = Var_Pos{0, var_amounts.vars_1B}
+			nasm.var_poss[name] = Var_Pos{0, var_amounts.vars_1B, bound_reg}
 			var_amounts.vars_1B += amount
 		case 2:
-			nasm.var_poss[name] = Var_Pos{1, var_amounts.vars_2B}
+			nasm.var_poss[name] = Var_Pos{1, var_amounts.vars_2B, bound_reg}
 			var_amounts.vars_2B += amount
 		case 4:
-			nasm.var_poss[name] = Var_Pos{2, var_amounts.vars_4B}
+			nasm.var_poss[name] = Var_Pos{2, var_amounts.vars_4B, bound_reg}
 			var_amounts.vars_4B += amount
 		case 8:
-			nasm.var_poss[name] = Var_Pos{3, var_amounts.vars_8B}
+			nasm.var_poss[name] = Var_Pos{3, var_amounts.vars_8B, bound_reg}
 			var_amounts.vars_8B += amount
 		case 16:
-			nasm.var_poss[name] = Var_Pos{4, var_amounts.vars_16B}
+			nasm.var_poss[name] = Var_Pos{4, var_amounts.vars_16B, bound_reg}
 			var_amounts.vars_16B += amount
 		}
 	}
@@ -90,10 +92,25 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string,
 	addf(&nasm.text_sec, "\n\t; Triops: User code\n")
 	for _, instruction := range scope.assembly.instructions {
 		addf(&nasm.text_sec, "\t")
-		if token_txt_str(instruction.mnemonic, set.text) == "#lbl" {
-			addf(&nasm.text_sec, "%v.%v:\n", scope_path, token_txt_str(instruction.args[0].verbatim, set.text))
+		switch instruction.mnemonic.tag {
+			case DIRECTIVE_LBL:
+			addf(&nasm.text_sec, "\n\t%v.%v:\n", scope_path, token_txt_str(instruction.args[0].verbatim, set.text))
+			continue
+
+			case DIRECTIVE_REG:
+			varname := token_txt_str(instruction.args[0].verbatim, set.text)
+			regname := token_txt_str(instruction.args[1].verbatim, set.text)
+			addf(&nasm.text_sec, "; Triops: binding %v\n", varname)
+			pos, exists := nasm.var_poss[varname]
+			if !exists {
+				fmt.Println(varname)
+				panic("codegen: There was an unrecognized variable all the way in codegen")
+			}
+			offset := nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index
+			addf(&nasm.text_sec, "\tmov %v, %v [rsp + %v]\n\n", regname, indexing_word(instruction.alignment), offset)
 			continue
 		}
+
 		nasm.text_sec.WriteString(token_txt_str(instruction.mnemonic, set.text))
 		for arg_nr, arg := range instruction.args {
 			has_verbatim := arg.verbatim.pos != 0
@@ -115,7 +132,11 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string) (string,
 					fmt.Println(verbatim_str, arg.verbatim.tag)
 					panic("codegen: There was an unrecognized variable all the way in codegen")
 				}
-				verbatim_str = fmt.Sprintf("rsp + %v", nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index)
+				if pos.reg != "" {
+					verbatim_str = pos.reg
+				} else {
+					verbatim_str = fmt.Sprintf("rsp + %v", nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index)
+				}
 			}
 
 			if has_verbatim && has_immediate {
