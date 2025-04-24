@@ -1,5 +1,4 @@
 package main
-import "fmt"
 
 func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Value, exists bool) {
 	old_index := set.index
@@ -8,7 +7,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 	value, enum_typ, exists = resolve_enum_value(set, scope)
 	if exists {
 		if !are_types_equal(ti, enum_typ) {
-			print_error_line("Type mismatch between declared variable and enum value", set)
+			print_error_line(set, "Type mismatch between declared variable and enum value")
 			return value, false
 		}
 		return value, true
@@ -19,7 +18,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 	tag_associated_index, tag := unpack_ti(ti)
 	value = Value{form : VALUE_FORM_NONE, pos : value_head}
 	tagswitch: switch tag {
-		case TYPE_ERR: print_error_line("resolve_decl_value: internal type error", set)
+		case TYPE_ERR: print_error_line(set, "resolve_decl_value: internal type error")
 		case TYPE_BARE:
 			/* TODO: this has to account for the different forms of a bare type!! */
 			var integer int
@@ -44,7 +43,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 				var tvalue Value
 				tvalue, exists = resolve_string_value(set, scope)
 				if exists && bare_types[si].form != VALUE_FORM_WILD && bare_types[si].form != VALUE_FORM_STRING {
-					print_error_line("This variable/constant does not allow string assignment", set)
+					print_error_line(set, "This variable/constant does not allow string assignment")
 					return value, false
 				} else if exists {
 					if tag == TYPE_RT_ARRAY {
@@ -52,7 +51,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 						   larger than bytes, and pad or error if it's mismatched */
 						integer_at_value(value, tvalue.len)
 					} else if st_array_types[tag_associated_index].size != tvalue.len {
-						print_error_line("Given string was larger than the size of the array", set)
+						print_error_line(set, "Given string was larger than the size of the array")
 						return value, false
 					}
 					break tagswitch
@@ -67,22 +66,22 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 				/* TODO: Handle extra comma's more gracefully */
 				/* TODO: Report on how much values were expected */
 				if !exists {
-					if old_index == set.index { print_error_line("Value in array is malformed", set) }
+					if old_index == set.index { print_error_line(set, "Value in array is malformed") }
 					return value, false
 				}
 				inc(set)
 				if curr(set).tag != KEYWORD_COMMA && curr(set).tag != KEYWORD_CLOSE_BRACE{
-					print_error_line("Unexpected token in array literal", set)
+					print_error_line(set, "Unexpected token in array literal")
 					return value, false
 				}
 				array_len += 1
 				if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size < array_len {
-					print_error_line("Too many values in static array literal", set)
+					print_error_line(set, "Too many values in static array literal")
 					return value, false
 				}
 			}
 			if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size > array_len {
-				print_error_line("Too few values in static array literal", set)
+				print_error_line(set, "Too few values in static array literal")
 				return value, false
 			}
 			if tag == TYPE_RT_ARRAY {
@@ -91,10 +90,10 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 		case TYPE_POINTER:
 			/* TODO: Add typechecking here, as well as some sort of indication of where to find which variable is being pointed to,
 			   as the actual pointer is naturally a runtime variable, and we have to communicate that at compiletime to the backend somehow */
-			print_error_line("resolve_decl_value: pointers are unsupported", set)
+			print_error_line(set, "resolve_decl_value: pointers are unsupported")
 			return value, false
 		case TYPE_STRUCT:
-			print_error_line("resolve_decl_value: struct", set)
+			print_error_line(set, "resolve_decl_value: struct")
 	}
 	value.len = value_head - value.pos
 	return value, true
@@ -121,12 +120,12 @@ func parse_type(set *Token_Set, scope *Scope) (ti Type_Index, exists bool) {
 		size := 0
 		size, exists = resolve_integer(set, scope)
  		if !exists || size < 0 {
-			print_error_line("Value for array size needs to be a positive integer", set)
+			print_error_line(set, "Value for array size needs to be a positive integer")
 			return ti, false
 		}
 		inc(set)
 		if curr(set).tag != KEYWORD_CLOSE_BRACKET {
-			print_error_line("Array size bracket not closed", set)
+			print_error_line(set, "Array size bracket not closed")
 			return ti, false
 		}
 		/* [0] */
@@ -163,18 +162,18 @@ func resolve_enum_value(set *Token_Set, scope *Scope) (value Value, typ Type_Ind
 	}
 	inc(set)
 	if curr(set).tag != KEYWORD_DOT {
-		print_error_line("This enum is not a single constant, a subname needs to be specified", set)
+		print_error_line(set, "This enum is not a single constant, a subname needs to be specified")
 		return value, typ, false
 	}
 	inc(set)
 	if curr(set).tag != NONE {
-		print_error_line("Invalid enum subname", set)
+		print_error_line(set, "Invalid enum subname")
 		return value, typ, false
 	}
 	evid.name = token_str(set)
 	value, exists = enum_values[evid]
 	if !exists {
-		print_error_line("Enum subvalue does not exist", set)
+		print_error_line(set, "Enum subvalue does not exist")
 		return value, typ, false
 	}
 	return value, typ, true
@@ -190,12 +189,12 @@ func resolve_integer(set *Token_Set, scope *Scope) (v int, exists bool) {
 		value, _, exists = resolve_enum_value(set, scope)
 		if !exists {
 			if old_index != set.index { set.index = old_index; return v, false }
-			print_error_line("Enum does not exist", set)
+			print_error_line(set, "Enum does not exist")
 			return v, false
 		}
 		v, exists = value_to_integer(value)
 		if !exists {
-			print_error_line("Enum value was not an integer", set)
+			print_error_line(set, "Enum value was not an integer")
 			return v, false
 		}
 		return v, true
@@ -240,53 +239,18 @@ func resolve_string_value(set *Token_Set, scope *Scope) (value Value, exists boo
 
 func validate_name(set *Token_Set, scope *Scope) bool {
 	name_str := token_str(set)
-	
 	if curr(set).tag != NONE {
-		print_error_line("Name must not be a number, string or language keyword", set)
+		print_error_line(set, "Name must not be a number, string or language keyword")
 		return false
 	}
 	this := where_is(scope, name_str);
 	if this.named_thing != NAME_NOT_HERE {
 		/* TODO: print where the it was defined */
 		things_it_could_be_defined_as := []string{"a type", "an enum", "a variable", "a label", "a procedure"}
-		printf_error_line(set, "Name was already declared as %s", things_it_could_be_defined_as[this.named_thing-NAME_TYPE])
+		print_error_line(set, "Name was already declared as %s", things_it_could_be_defined_as[this.named_thing-NAME_TYPE])
 		return false
 	}
 	return true
-}
-
-func printf_error_line(set *Token_Set, message string, args ...any) {
-	print_error_line(fmt.Sprintf(message, args...), set)
-}
-
-func print_error_line(message string, set *Token_Set) {
-	var full_line Token
-	token := curr(set)
-	/* line_nr and start of the line */
-	line_nr := 1
-	for i := token.pos; i < token.pos + 1; i -= 1 {
-		char := set.text[i]
-		if line_nr == 1 && char == '\n' { full_line.pos = i + 1 }
-		if char == '\n' { line_nr += 1 }
-	}
-	/* end of the line */
-	for i := full_line.pos; i < uint32(len(set.text)); i += 1 {
-		full_line.len += 1
-		if set.text[i] == '\n' { break }
-	}
-	/* main print */
-	full_line_str := token_txt_str(full_line, set.text)
-	fmt.Printf("%s:\n", message)
-	chars_written, _ := fmt.Printf("%d | ", line_nr)
-	fmt.Printf("%s", full_line_str)
-	/* the  c a r e t s */
-	for i := 0; i < chars_written; i += 1 { fmt.Print(" ") }
-	for i := uint32(0); i < token.pos - full_line.pos; i += 1 {
-		if is_white(rune(full_line_str[i])) { fmt.Printf("%c", rune(full_line_str[i]))
-		} else { fmt.Print(" ") }
-	}
-	for i := uint16(0); i < token.len; i += 1 { fmt.Print("^") }
-	fmt.Println()
 }
 
 func token_str(set *Token_Set) string {
@@ -322,11 +286,11 @@ func skip_statement(set *Token_Set) bool {
 func finish_statement(set *Token_Set) bool {
 	if set.commas_and_parens_as_semis {
 		if curr(set).tag == KEYWORD_COMMA || curr(set).tag == KEYWORD_CLOSE_PAREN { return true }
-		print_error_line("Comma or closing parenthesis missing", dec(set))
+		print_error_line(dec(set), "Comma or closing parenthesis missing")
 		return skip_statement(inc(set))
 	} else {
 		if curr(set).tag == KEYWORD_SEMICOLON { return true }
-		print_error_line("Statement must be ended with a semicolon", dec(set))
+		print_error_line(dec(set), "Statement must be ended with a semicolon")
 		return skip_statement(inc(set))
 	}
 }

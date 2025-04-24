@@ -73,7 +73,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	name := token_str(set)
 	inc(set)
 	if curr(set).tag != KEYWORD_IS {
-		print_error_line("The word 'is' was expected", set)
+		print_error_line(set, "The word 'is' was expected")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -90,7 +90,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 		i, tag := unpack_ti(ti)
 		switch tag {
 			case TYPE_ERR:
-				print_error_line("Internal unknown type error", set)
+				print_error_line(set, "Internal unknown type error")
 				return skip_statement(set)
 			case TYPE_BARE:
 				new_type = bare_types[i]
@@ -123,9 +123,9 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	integer, exists = resolve_integer(set, scope)
 	if !exists {
 		if curr(set).tag == NONE {
-			print_error_line("Value or type was not defined", set)
+			print_error_line(set, "Value or type was not defined")
 		} else {
-			print_error_line("Type declarations expect the alignment and column size to be positive integers", set)
+			print_error_line(set, "Type declarations expect the alignment and column size to be positive integers")
 		}
 		return skip_statement(set)
 	}
@@ -136,13 +136,13 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 		new_type.amount = integer
 	} else if curr(set).tag == KEYWORD_BYTES {
 		if integer != 1 && integer != 2 && integer != 4 && integer != 8 && integer != 16 {
-			print_error_line("Alignment can only be a power of two, up to 16", set)
+			print_error_line(set, "Alignment can only be a power of two, up to 16")
 			return skip_statement(set)
 		}
 		new_type.alignment = integer
 		alignment_set = true
 	} else {
-		print_error_line("Expected either the keyword `bytes` or `columns`", set)
+		print_error_line(set, "Expected either the keyword `bytes` or `columns`")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -160,20 +160,20 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 		integer, exists = resolve_integer(set, scope)
 		if !exists {
 			if curr(set).tag == NONE {
-				print_error_line("Value or type was not defined", set)
+				print_error_line(set, "Value or type was not defined")
 			} else {
-				print_error_line("Type declarations expect the alignment column size to be a positive integer", set)
+				print_error_line(set, "Type declarations expect the alignment column size to be a positive integer")
 			}
 			return skip_statement(set)
 		}
 		inc(set)
 		
 		if curr(set).tag != KEYWORD_BYTES {
-			print_error_line("Expected either the keyword `bytes`", set)
+			print_error_line(set, "Expected the keyword `bytes`")
 			return skip_statement(set)
 		}
 		if integer != 1 && integer != 2 && integer != 4 && integer != 8 && integer != 16 {
-			print_error_line("Alignment can only be a power of two, up to 16", set)
+			print_error_line(set, "Alignment can only be a power of two, up to 16")
 			return skip_statement(set)
 		}
 		new_type.alignment = integer
@@ -189,7 +189,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	if t := curr(set).tag; t >= DIRECTIVE_INTFORM && t <= DIRECTIVE_BYTEFORM {
 		new_type.form = VALUE_FORM_INTEGER + (Value_Form(t) - DIRECTIVE_INTFORM)
 	} else {
-		print_error_line("Invalid typeform directive", set)
+		print_error_line(set, "Invalid typeform directive")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -210,7 +210,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	/* getting the type */
 	typ, exists = parse_type(set, scope)
 	if !exists {
-		print_error_line("Given type does not exist", set)
+		print_error_line(set, "Given type does not exist")
 		return skip_statement(set)
 	}
 
@@ -229,7 +229,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 		inc(set)
 		integer, exists = resolve_integer(set, scope)
 		if !exists {
-			print_error_line("Invalid integer", set)
+			print_error_line(set, "Invalid integer")
 			return skip_statement(set)
 		}
 		value = integer_to_sized_value(integer, size_of_type(typ))
@@ -239,7 +239,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	}
 	/* normal block of names case */
 	if curr(set).tag != KEYWORD_OPEN_BRACE {
-		print_error_line("Enum must have a block of names (and optional values)", set)
+		print_error_line(set, "Enum must have a block of names (and optional values)")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -248,14 +248,14 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	for curr(set).tag != KEYWORD_CLOSE_BRACE && !set.end {
 		//print_error_line("test", tokens[index], scope)
 		if curr(set).tag != NONE {
-			print_error_line("Names must not be reserved keywords or values", set)
+			print_error_line(set, "Names must not be reserved keywords or values")
 			return skip_statement(set)
 		}
 		/* getting value name */
 		evid.name = token_str(set)
 		_, exists = enum_values[evid]
 		if exists {
-			print_error_line("Name is already in use in this enum", set)
+			print_error_line(set, "Name is already in use in this enum")
 			return skip_statement(set)
 		}
 		inc(set)
@@ -264,7 +264,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 			inc(set)
 			integer, exists = resolve_integer(set, scope)
 			if !exists {
-				print_error_line("Invalid integer", set)
+				print_error_line(set, "Invalid integer")
 				return skip_statement(set)
 			}
 			inc(set)
@@ -276,7 +276,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 		}
 
 		if curr(set).tag != KEYWORD_COMMA && curr(set).tag != KEYWORD_CLOSE_BRACE {
-			print_error_line("Expected a comma or closing brace", set)
+			print_error_line(set, "Expected a comma or closing brace")
 			return skip_statement(set)
 		}
 		if curr(set).tag == KEYWORD_COMMA { inc(set) }

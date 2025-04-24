@@ -6,6 +6,17 @@ char[] greet = "Sailor\n";
 enum int syscalls {write = 1, exit = 60};
 enum int streams { In, out, err };
 
+#*
+(int errorcode) (int stream) write (char[0] data, int length) {
+	#reg data = rsi;
+	#reg length = rax;
+	#reg stream = rdi;
+	mov system_function, syscalls.write;
+	syscall;
+	mov errorcode, rsi; ## I don't actually know where the return of the write syscall is
+}
+*#
+
 char[0] data;
 int length;
 int system_function;
@@ -38,8 +49,6 @@ char[][] hellos = {
 char[][][] aaa = {
 	{"h", "haaa", "hoohooo"}, {"haiaaiaa"}
 };
-
-## (int A) (int B) write (int C, int F, int D = 10);
 
 int[] D;
 *#

@@ -13,12 +13,12 @@ type Scope struct {
 	names []What
 	label_uses []Token
 //	imports map[string]*Scope
+//	code Code_Block
 	assembly Asm_Block
 }
 
 type Asm_Block struct {
 	instructions []Asm_Instruction
-	vars_with_bound_regs []int
 }
 
 /* this'd be sized [4][8]byte */

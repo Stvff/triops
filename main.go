@@ -125,7 +125,7 @@ func main() {
 			old_index := set.index
 			if !parse_variable_decl(&set, &global_scope) { error_count += 1 }
 			if set.index == old_index {
-				print_error_line("Unknown type for global declaration", &set)
+				print_error_line(&set, "Unknown type for global declaration")
 				error_count += 1
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
@@ -138,12 +138,12 @@ func main() {
 			for _, lbl_token := range global_scope.label_uses {
 				this := where_is(&global_scope, token_txt_str(lbl_token, set.text))
 				if this.named_thing != NAME_LABEL {
-					print_error_line("Usage of a label that doesn't exist", &set)
+					print_error_line(&set, "Usage of a label that doesn't exist")
 					error_count += 1
 				}
 			}
 		default:
-			print_error_line("Unexpected toplevel token", &set)
+			print_error_line(&set, "Unexpected toplevel token")
 			skip_statement(&set)
 			error_count += 1
 		}
@@ -171,7 +171,36 @@ func main() {
 	}
 }
 
-//var ggscope *Scope
+/* TODO: one-time explainers about specific errors */
+func print_error_line(set *Token_Set, message string, args ...any) {
+	var full_line Token
+	token := curr(set)
+	/* line_nr and start of the line */
+	line_nr := 1
+	for i := token.pos; i < token.pos + 1; i -= 1 {
+		char := set.text[i]
+		if line_nr == 1 && char == '\n' { full_line.pos = i + 1 }
+		if char == '\n' { line_nr += 1 }
+	}
+	/* end of the line */
+	for i := full_line.pos; i < uint32(len(set.text)); i += 1 {
+		full_line.len += 1
+		if set.text[i] == '\n' { break }
+	}
+	/* main print */
+	full_line_str := token_txt_str(full_line, set.text)
+	fmt.Printf("%s:\n", fmt.Sprintf(message, args...))
+	chars_written, _ := fmt.Printf("%d | ", line_nr)
+	fmt.Printf("%s", full_line_str)
+	/* the  c a r e t s */
+	for i := 0; i < chars_written; i += 1 { fmt.Print(" ") }
+	for i := uint32(0); i < token.pos - full_line.pos; i += 1 {
+		if is_white(rune(full_line_str[i])) { fmt.Printf("%c", rune(full_line_str[i]))
+		} else { fmt.Print(" ") }
+	}
+	for i := uint16(0); i < token.len; i += 1 { fmt.Print("^") }
+	fmt.Println()
+}
 
 func is_white(char rune) bool {
 	switch char {
