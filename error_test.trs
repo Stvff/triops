@@ -1,0 +1,139 @@
+#*######## Top level *#
+## "Unexpected toplevel token"
+for;
+
+
+#*######## Types *#
+#* correct *#
+type t1 is 4 bytes;
+type t2 is 4 columns;
+type t3 is 3 columns of 4 bytes;
+type t4 is t1;
+type t5 is 4 bytes #floatform;
+type byte is 1 bytes;
+
+#* errors *#
+## "Name must not be a number, string or language keyword"
+type;
+## "The word `is` was expected"
+type type_error;
+## "Type declarations expect the alignment and column size to be positive integers"
+type type_error is;
+## "Enum does not exist"
+## "Value or type was not defined"
+type type_error is undefined;
+## UNTESTED: "Enum value was not an integer"
+## "Alignment can only be a power of two, up to 16"
+type type_error is 6 bytes;
+## "Expected either the keyword `bytes` or `columns`"
+type type_error is 4;
+## "Expected the keyword `bytes`"
+type type_error is 3 columns of 4;
+## "Expected a semicolon or typeform"
+type type_error is 3 columns of 4 bytes intform;
+
+
+#*######## Enums *#
+#* correct *#
+enum t1 e1 = 3;
+enum t1 e2 {a, b, c};
+enum t1 e3 {a = 4, b, c = 3};
+
+#* errors *#
+## "Given type does not exist:"
+enum;
+## "Name must not be a number, string or language keyword"
+enum t1;
+## "Enum must have a block of names (and optional values) or be a single assignment"
+enum t1 enum_error;
+## "Invalid integer"
+enum t1 enum_error1 = ;
+## "Names must not be reserved keywords of values"
+enum t1 enum_error2 {for};
+## "Name is already in use in this enum"
+enum t1 enum_error3 {a, a};
+## "Invalid integer"
+enum t1 enum_error4 {a = };
+## "Expected a comma or closing brace"
+enum t1 enum_error5 {a = 12 b};
+
+
+#*######## decleration (so parse_type() and resolve_decl_value() *#
+#* correct *#
+t1 v1 = 10;
+t1 v2 = e1;
+t1 v3 = e2.a; ## bug in the codegen
+##t1[4] v4 = {1, 2, 3, 4};
+t1[] v5 = {5, 6, 7, 8, 9};
+byte v6;
+byte[] str = "Hey\n";
+byte[0] ptr;
+
+#* errors *#
+## "Unknown type for global declaration"
+type_error;
+## "Value for array size needs to be a positive integer"
+t1['] decl_error;
+## "Array size bracket not closed"
+t1[3 decl_error;
+## "This enum is not a single constant, a subname needs to be specified"
+t1 decl_error = e2;
+## "Invalid enum subname"
+t1 decl_error = e2.;
+## "Enum subvalue does not exist" 
+t1 decl_error = e2.d;
+## "Type mismatch between declared variable and enum value"
+t2 decl_error = e1;
+## "This variable/constant does not allow string assignment"
+t5[] decl_error = "abcd";
+## "Given string was larger than the size of the array"
+byte[3] decl_error = "abcd";
+## "Value in array is malformed" (x2)
+byte[4] decl_error = 10;
+byte[4] decl_error = {10,,};
+## "Unexpected token in array literal"
+byte[4] decl_error = {10 word};
+## "Too many values in static array literal (expected %v values, got %v)"
+byte[4] decl_error = {1, 2, 3, 4, 5};
+## "Too few values in static array literal (expected %v values, got %v)"
+byte[4] decl_error = {1, 2, 3};
+
+
+#*######## assembly *#
+entry {
+#* correct *#
+#reg v1 = eax;
+#reg v2 = edx;
+#lbl l1;
+
+#* errors *#
+## "Expected a valid variable to bind a register to"
+#reg undefined;
+## "Total size of the variable to be bound mus be less than 8 bytes (was %v)"
+#reg v5;
+## "Expected an `=`"
+#reg v1;
+## "Missing closing bracket"
+add v1[0, v2;
+## "A label has an alignment of 8, which is not the same as the alignment used in this instruction (%v bytes)"
+add v1, #lbl l1;
+## "This register does not have the alignment expected in its context. It has %v bytes, while %v bytes was expected"
+add #rq rax, #rd eax;
+## "Register must not be a keyword or value"
+add #rq 1;
+## "The maximum amount of arguments for assembly instructions is 3"
+add v1, v2, v2, v1;
+## "This variable does not have the alignment expected in its context. It is aligned to %v bytes, while %v bytes was expected"
+add v1, ptr;
+## "Enum value does not have the alignment expected in its context. It is aligned to %v bytes, while %v bytes was expected"
+add v6, e1;
+## "Enum or variable was not defined"
+add v1, undefined;
+## "Unknown enum subvalue"
+add v1, e2.d;
+## "Keyword, enum, variable or value was not defined or recognized"
+add .;
+## "Usage of a label that doesn't exist"
+jmp #lbl undefined;
+
+}

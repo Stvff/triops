@@ -73,7 +73,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	name := token_str(set)
 	inc(set)
 	if curr(set).tag != KEYWORD_IS {
-		print_error_line(set, "The word 'is' was expected")
+		print_error_line(set, "The word `is` was expected")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -189,7 +189,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	if t := curr(set).tag; t >= DIRECTIVE_INTFORM && t <= DIRECTIVE_BYTEFORM {
 		new_type.form = VALUE_FORM_INTEGER + (Value_Form(t) - DIRECTIVE_INTFORM)
 	} else {
-		print_error_line(set, "Invalid typeform directive")
+		print_error_line(set, "Expected a semicolon or typeform")
 		return skip_statement(set)
 	}
 	inc(set)
@@ -198,6 +198,7 @@ func parse_type_decl(set *Token_Set, scope *Scope) bool {
 	return finish_statement(set)
 }
 
+/* TODO: make enums accept more than integers, any value than the type allows */
 func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	var (
 		typ Type_Index
@@ -239,7 +240,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	}
 	/* normal block of names case */
 	if curr(set).tag != KEYWORD_OPEN_BRACE {
-		print_error_line(set, "Enum must have a block of names (and optional values)")
+		print_error_line(set, "Enum must have a block of names (and optional values) or be a single assignment")
 		return skip_statement(set)
 	}
 	inc(set)

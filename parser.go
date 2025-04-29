@@ -7,11 +7,13 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 	value, enum_typ, exists = resolve_enum_value(set, scope)
 	if exists {
 		if !are_types_equal(ti, enum_typ) {
+			/*TODO: print definitions*/
 			print_error_line(set, "Type mismatch between declared variable and enum value")
 			return value, false
 		}
 		return value, true
 	} else if old_index != set.index {
+		set.index = old_index
 		return value, false
 	}
 	
@@ -20,7 +22,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 	tagswitch: switch tag {
 		case TYPE_ERR: print_error_line(set, "resolve_decl_value: internal type error")
 		case TYPE_BARE:
-			/* TODO: this has to account for the different forms of a bare type!! */
+			/* TODO: this has to account for the different forms of a bare type, not just ints (this lets through incorrect assignments */
 			var integer int
 			integer, exists = resolve_integer(set, scope)
 			value = integer_to_sized_value(integer, size_of_type(ti))
@@ -64,9 +66,9 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 				old_index = set.index
 				_, exists = resolve_decl_value(set, scope, nested_ti)
 				/* TODO: Handle extra comma's more gracefully */
-				/* TODO: Report on how much values were expected */
 				if !exists {
 					if old_index == set.index { print_error_line(set, "Value in array is malformed") }
+					dec(set)
 					return value, false
 				}
 				inc(set)
@@ -76,12 +78,12 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 				}
 				array_len += 1
 				if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size < array_len {
-					print_error_line(set, "Too many values in static array literal")
+					print_error_line(set, "Too many values in static array literal (expected %v values, got %v)", st_array_types[tag_associated_index].size, array_len)
 					return value, false
 				}
 			}
 			if tag == TYPE_ST_ARRAY && st_array_types[tag_associated_index].size > array_len {
-				print_error_line(set, "Too few values in static array literal")
+				print_error_line(set, "Too few values in static array literal (expected %v values, got %v)", st_array_types[tag_associated_index].size, array_len)
 				return value, false
 			}
 			if tag == TYPE_RT_ARRAY {
@@ -90,10 +92,10 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 		case TYPE_POINTER:
 			/* TODO: Add typechecking here, as well as some sort of indication of where to find which variable is being pointed to,
 			   as the actual pointer is naturally a runtime variable, and we have to communicate that at compiletime to the backend somehow */
-			print_error_line(set, "resolve_decl_value: pointers are unsupported")
+			print_error_line(set, "resolve_decl_value: pointers are unfinished")
 			return value, false
 		case TYPE_STRUCT:
-			print_error_line(set, "resolve_decl_value: struct")
+			print_error_line(set, "resolve_decl_value: structs are unfinished")
 	}
 	value.len = value_head - value.pos
 	return value, true
@@ -125,6 +127,7 @@ func parse_type(set *Token_Set, scope *Scope) (ti Type_Index, exists bool) {
 		}
 		inc(set)
 		if curr(set).tag != KEYWORD_CLOSE_BRACKET {
+			/* TODO: print where the open bracket was? */
 			print_error_line(set, "Array size bracket not closed")
 			return ti, false
 		}

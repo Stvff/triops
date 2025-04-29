@@ -6,12 +6,17 @@ import (
 )
 
 func main() {
-	file, err := os.ReadFile("stest.trs")
+	file, err := os.ReadFile("error_test.trs")
+	// file, err := os.ReadFile("stest.trs")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	full_text := string(file)
+	if len(full_text) == 0 {
+		fmt.Println("Empty file, expected at least `entry`")
+		return;
+	}
 
 	tokens := make([]Token, 0)
 	var token Token
@@ -101,6 +106,10 @@ func main() {
 			continue
 		}
 	}
+	if len(tokens) == 0 {
+		fmt.Println("There is no code in this file (only comments), expected at least `entry`")
+		return;
+	}
 
 	var global_scope Scope
 	set := Token_Set {
@@ -134,11 +143,11 @@ func main() {
 			if !parse_proc_decl(&set, &global_scope) { error_count += 1 }
 		case KEYWORD_ASM: fallthrough
 		case KEYWORD_ENTRY:
-			if !parse_asm(&set, &global_scope) { error_count += 1 }
+			error_count += parse_asm(&set, &global_scope)
 			for _, lbl_token := range global_scope.label_uses {
 				this := where_is(&global_scope, token_txt_str(lbl_token, set.text))
 				if this.named_thing != NAME_LABEL {
-					print_error_line(&set, "Usage of a label that doesn't exist")
+					print_error_line_token_txt(lbl_token, set.text, "Usage of a label that doesn't exist")
 					error_count += 1
 				}
 			}
@@ -173,25 +182,29 @@ func main() {
 
 /* TODO: one-time explainers about specific errors */
 func print_error_line(set *Token_Set, message string, args ...any) {
+	print_error_line_token_txt(curr(set), set.text, message, args...)
+}
+
+func print_error_line_token_txt(token Token, text string, message string, args ...any) {
 	var full_line Token
-	token := curr(set)
 	/* line_nr and start of the line */
 	line_nr := 1
 	for i := token.pos; i < token.pos + 1; i -= 1 {
-		char := set.text[i]
+		char := text[i]
 		if line_nr == 1 && char == '\n' { full_line.pos = i + 1 }
 		if char == '\n' { line_nr += 1 }
 	}
 	/* end of the line */
-	for i := full_line.pos; i < uint32(len(set.text)); i += 1 {
+	for i := full_line.pos; i < uint32(len(text)); i += 1 {
 		full_line.len += 1
-		if set.text[i] == '\n' { break }
+		if text[i] == '\n' { break }
 	}
 	/* main print */
-	full_line_str := token_txt_str(full_line, set.text)
+	full_line_str := token_txt_str(full_line, text)
 	fmt.Printf("%s:\n", fmt.Sprintf(message, args...))
 	chars_written, _ := fmt.Printf("%d | ", line_nr)
 	fmt.Printf("%s", full_line_str)
+	if full_line_str[len(full_line_str)-1] != '\n' { fmt.Println() }
 	/* the  c a r e t s */
 	for i := 0; i < chars_written; i += 1 { fmt.Print(" ") }
 	for i := uint32(0); i < token.pos - full_line.pos; i += 1 {

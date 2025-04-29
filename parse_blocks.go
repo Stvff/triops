@@ -1,6 +1,6 @@
 package main
 
-func parse_asm(set *Token_Set, scope *Scope) bool {
+func parse_asm(set *Token_Set, scope *Scope) int {
 	inc(set)
 	single_statement := false
 	if curr(set).tag != KEYWORD_OPEN_BRACE {
@@ -9,7 +9,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 		set.codebraces += 1
 		inc(set)
 	}
-	ok := true
+	error_count := 0
 
 	statloop: for ; !set.end ; inc(set) {
 		// print_error_line("where are we", set)
@@ -20,7 +20,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 		case DIRECTIVE_LBL:
 			inc(set)
 			if !validate_name(set, scope) {
-				ok = false
+				error_count += 1
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
@@ -31,14 +31,14 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			add_label_to_scope(scope, token_str(set), len(scope.assembly.instructions))
 			scope.assembly.instructions = append(scope.assembly.instructions, instruction)
 
-			if !finish_statement(inc(set)) { ok = false }
+			if !finish_statement(inc(set)) { error_count += 1 }
 			if single_statement { break statloop } else { continue statloop }
 		case DIRECTIVE_REG:
 			inc(set)
 			this := where_is(scope, token_str(set))
 			if this.named_thing != NAME_DECL {
 				print_error_line(set, "Expected a valid variable to bind a register to");
-				ok = false
+				error_count += 1
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
@@ -47,8 +47,8 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 
 			associated_decl := all_decls[this.index]
 			if size_of_type(associated_decl.typ) > 8 {
-				print_error_line(set, "Total size of the variable to be bound must be less than 8 bytes")
-				ok = false
+				print_error_line(set, "Total size of the variable to be bound must be less than 8 bytes (was %v)", size_of_type(associated_decl.typ))
+				error_count += 1;
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
@@ -57,7 +57,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			inc(set)
 			if curr(set).tag != KEYWORD_EQUALS {
 				print_error_line(set, "Expected an `=`")
-				ok = false
+				error_count += 1;
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
 			}
@@ -66,7 +66,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			instruction.args[1].verbatim = curr(set)
 			scope.assembly.instructions = append(scope.assembly.instructions, instruction)
 			
-			if !finish_statement(inc(set)) { ok = false }
+			if !finish_statement(inc(set)) { error_count += 1 }
 			if single_statement { break statloop } else { continue statloop }
 		case KEYWORD_CLOSE_BRACE: break statloop
 		}
@@ -89,11 +89,11 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			case KEYWORD_OPEN_BRACKET:
 				inc(set)
 				offset, exists := resolve_integer(set, scope)
-				if !exists { ok = false; if single_statement { break statloop } else { continue statloop } }
+				if !exists { error_count += 1; if single_statement { break statloop } else { continue statloop } }
 				instruction.args[arg_nr].immediate = integer_to_value(offset)
 				inc(set)
 				if curr(set).tag != KEYWORD_CLOSE_BRACKET {
-					ok = false
+					error_count += 1
 					print_error_line(set, "Missing closing bracket")
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
@@ -105,7 +105,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				if arg_nr == 0 {
 					alignment_of_instruction = 8
 				} else if alignment_of_instruction != 8 {
-					print_error_line(set, "A label has an alignment of 8, which is not the same as the alignment used in this instruction");
+					print_error_line(set, "A label has an alignment of 8, which is not the same as the alignment used in this instruction (%v bytes)", alignment_of_instruction);
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
 				}
@@ -121,14 +121,14 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				if arg_nr == 0 {
 					alignment_of_instruction = reg_alignment
 				} else if alignment_of_instruction != reg_alignment {
-					ok = false
-					print_error_line(set, "This register does not have the alignment expected in its context")
+					error_count += 1
+					print_error_line(set, "This register does not have the alignment expected in its context, It has %v bytes, while %v bytes was expected", reg_alignment, alignment_of_instruction)
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
 				}
 				inc(set)
 				if curr(set).tag != NONE {
-					ok = false
+					error_count += 1
 					print_error_line(set, "Register must not be a keyword or value")
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
@@ -140,7 +140,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			case KEYWORD_COMMA:
 				arg_nr += 1
 				if arg_nr >= 3 {
-					ok = false
+					error_count += 1
 					print_error_line(set, "The maximum amount of arguments for assembly instructions is 3")
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
@@ -150,7 +150,7 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 			case VALUE_INTEGER:
 				integer, exists := resolve_integer(set, scope)
 				if !exists {
-					ok = false
+					error_count += 1
 					print_error_line(set, "Malformed integer (somehow)")
 					skip_statement(set)
 					if single_statement { break statloop } else { continue statloop }
@@ -166,8 +166,8 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 					if arg_nr == 0 {
 						alignment_of_instruction = align_of_type(decl.typ)
 					} else if align_of_type(decl.typ) != alignment_of_instruction {
-						ok = false
-						print_error_line(set, "This variable does not have the alignment expected in its context")
+						error_count += 1
+						print_error_line(set, "This variable does not have the alignment expected in its context. It is aligned to %v bytes, while %v bytes was expected", align_of_type(decl.typ), alignment_of_instruction)
 						skip_statement(set)
 						if single_statement { break statloop } else { continue statloop }
 					}
@@ -177,18 +177,17 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 					old_index := set.index
 					value, enum_typ, vexists := resolve_enum_value(set, scope)
 					if vexists && align_of_type(enum_typ) != alignment_of_instruction {
-						ok = false
-						print_error_line(set, "Enum value does not have the alignment expected in its context")
+						error_count += 1
+						print_error_line(set, "Enum value does not have the alignment expected in its context. It is aligned to %v bytes, while %v bytes was expected",  align_of_type(enum_typ), alignment_of_instruction)
 						skip_statement(set)
 						if single_statement { break statloop } else { continue statloop }
 					} else if !vexists && old_index == set.index {
-						ok = false
+						error_count += 1
 						print_error_line(set, "Enum or variable was not defined")
 						skip_statement(set)
 						if single_statement { break statloop } else { continue statloop }
 					} else if !vexists {
-						ok = false
-						print_error_line(set, "Unknown enum subvalue (delete this if it doubles up)")
+						error_count += 1
 						skip_statement(set)
 						if single_statement { break statloop } else { continue statloop }
 					}
@@ -196,7 +195,8 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 				}
 
 			default:
-				ok = false
+				error_count += 1
+				/* TODO: just unexpected token encountered?? */
 				print_error_line(set, "Keyword, enum, variable or value was not defined or recognized")
 				skip_statement(set)
 				if single_statement { break statloop } else { continue statloop }
@@ -214,5 +214,5 @@ func parse_asm(set *Token_Set, scope *Scope) bool {
 		set.codebraces -= 1
 	}
 
-	return ok
+	return error_count
 }

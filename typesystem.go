@@ -1,5 +1,4 @@
 package main
-//import "fmt"
 const (
 	TYPE_ERR = 0
 	TYPE_BARE = 1 + iota
@@ -137,8 +136,11 @@ func are_types_equal(left, right Type_Index) bool {
 		if left_tag != right_tag { return false }
 		if left_tag == TYPE_ST_ARRAY &&
 		   st_array_types[left_i].size != st_array_types[right_i].size { return false }
+		if left_tag == TYPE_BARE && left_i != right_i {return false}
 		left = follow_type(left)
 		right = follow_type(right)
+		left_i, left_tag = unpack_ti(left)
+		right_i, right_tag = unpack_ti(right)
 	}
 	return true
 }
