@@ -1,0 +1,18 @@
+type char is 1 bytes;
+type int is 8 bytes;
+
+char[] greeting = "Hi there!\n";
+
+enum int syscalls {write = 1, exit = 60};
+enum int streams { in, out, err };
+
+(int errorcode) (int stream) write (char[0] data, int length) asm {
+	#reg data = rsi;
+	#reg length = rax;
+	#reg stream = rdi;
+	mov system_function, syscalls.write;
+	syscall;
+	mov errorcode, rsi; ## I don't actually know where the return of the write syscall is
+}
+
+entry write greeting.data, greeting.count;

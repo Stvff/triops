@@ -1,0 +1,31 @@
+type char is 1 bytes;
+type int is 8 bytes;
+
+char[] greeting = "Hi there!\n";
+
+enum int syscalls {write = 1, exit = 60};
+enum int streams { in, out, err };
+
+char[0] data;
+int length;
+int system_function;
+int stream;
+int error_code;
+
+entry {
+	#reg data = rsi;
+	#reg length = rdx;
+	#reg system_function = rax;
+	#reg stream = rdi;
+
+	mov data, greeting[0];
+	mov length, greeting[1];
+	mov system_function, syscalls.write;
+	mov stream, streams.out;
+	syscall;
+
+	#reg error_code = rdi;
+	mov system_function, syscalls.exit;
+	mov error_code, 0;
+	syscall;
+}

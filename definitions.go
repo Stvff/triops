@@ -72,9 +72,6 @@ var keywords = map[string]Token_Tag {
 	"import"  : KEYWORD_IMPORT,
 	"type"    : KEYWORD_TYPE,
 	"struct"  : KEYWORD_STRUCT,
-	"prefix"  : KEYWORD_PREFIX,
-	"infix"   : KEYWORD_INFIX,
-	"postfix" : KEYWORD_POSTFIX,
 	"enum"    : KEYWORD_ENUM,
 	"entry"   : KEYWORD_ENTRY,
 	"macro"   : KEYWORD_MACRO,
@@ -90,7 +87,6 @@ var keywords = map[string]Token_Tag {
 	"inline" : KEYWORD_INLINE,
 
 	"for"      : KEYWORD_FOR,
-	"in"       : KEYWORD_IN,
 	"continue" : KEYWORD_CONTINUE,
 	"break"    : KEYWORD_BREAK,
 	"if"       : KEYWORD_IF,
@@ -139,9 +135,6 @@ const (
 		KEYWORD_IMPORT
 		KEYWORD_TYPE
 		KEYWORD_STRUCT
-		KEYWORD_PREFIX
-		KEYWORD_INFIX
-		KEYWORD_POSTFIX
 		KEYWORD_ENUM
 		KEYWORD_ENTRY
 		KEYWORD_MACRO
@@ -157,7 +150,6 @@ const (
 		KEYWORD_INLINE
 	
 		KEYWORD_FOR
-		KEYWORD_IN
 		KEYWORD_CONTINUE
 		KEYWORD_BREAK
 		KEYWORD_IF
