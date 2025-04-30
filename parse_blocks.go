@@ -1,9 +1,10 @@
 package main
 
 func parse_asm(set *Token_Set, scope *Scope) int {
-	inc(set)
 	single_statement := false
-	if curr(set).tag != KEYWORD_OPEN_BRACE {
+	if curr(set).tag == KEYWORD_SEMICOLON {
+		return 0
+	} else if curr(set).tag != KEYWORD_OPEN_BRACE {
 		single_statement = true
 	} else {
 		set.codebraces += 1
@@ -12,7 +13,7 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 	error_count := 0
 
 	statloop: for ; !set.end ; inc(set) {
-		// print_error_line("where are we", set)
+		//print_error_line(set, "where are we")
 		token := curr(set)
 
 		/* special cases */
@@ -171,6 +172,8 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 						skip_statement(set)
 						if single_statement { break statloop } else { continue statloop }
 					}
+					/* TODO: Check for the case of .data and .count */
+					/* TODO: Check we're not indexing an array */
 					instruction.args[arg_nr].verbatim = curr(set)
 
 					default:

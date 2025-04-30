@@ -6,15 +6,23 @@ char[] greeting = "Hi there!\n";
 enum int syscalls {write = 1, exit = 60};
 enum int streams { in, out, err };
 
-#*
-(int errorcode) (int stream) write (char[0] data, int length) asm {
+(int errorcode) (int stream) write (char[0] data, int length) {
 	#reg data = rsi;
-	#reg length = rax;
+	#reg length = rdx;
 	#reg stream = rdi;
-	mov system_function, syscalls.write;
+	mov #rq rax, syscalls.write;
 	syscall;
-	mov errorcode, rsi; ## I don't actually know where the return of the write syscall is
+	mov errorcode, #rq rsi; ## I don't actually know where the return of the write syscall is
 }
+
+int h;
+() write2;
+() () write3;
+() write4 ();
+() () write5 ();
+
+
+#*
 
 entry write greeting.data, greeting.count;
 *#

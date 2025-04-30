@@ -10,6 +10,7 @@ var (
 
 type Scope struct {
 	prev_scope *Scope
+	definition_location Token
 	names []What
 	label_uses []Token
 //	imports map[string]*Scope
@@ -54,10 +55,11 @@ type Decl_Des struct {
 
 type What struct {
 	name string
-	named_thing Named_Thing;
 	index int;
+	named_thing Named_Thing;
+	specialty Decl_Specialty;
 }
-type Named_Thing int;
+type Named_Thing int8;
 const (
 	NAME_NOT_HERE = 0
 	NAME_TYPE = 1 + iota
@@ -65,6 +67,13 @@ const (
 	NAME_DECL
 	NAME_LABEL
 	NAME_PROC
+)
+type Decl_Specialty int8;
+const (
+	SPEC_NONE = 0
+	SPEC_OUTPUT = 1 + iota
+	SPEC_LINPUT
+	SPEC_RINPUT
 )
 
 type Token_Tag int16

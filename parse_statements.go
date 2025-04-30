@@ -1,36 +1,76 @@
 package main
 
-func parse_proc_decl(set *Token_Set, scope *Scope) bool {
+func parse_proc_decl(set *Token_Set, scope *Scope) int {
 	set.commas_and_parens_as_semis = true
+	error_count := 0
+	var proc Scope
+	proc.prev_scope = scope
+
 	/* checking for return variables */
-	parse_variable_decl(set, scope)
+	for curr(set).tag != KEYWORD_CLOSE_PAREN {
+		parse_variable_decl(set, &proc, SPEC_OUTPUT)
+		if curr(set).tag != KEYWORD_CLOSE_PAREN && curr(set).tag != KEYWORD_COMMA {
+			print_error_line(set, "Expected a comma or closing parenthesis")
+			skip_statement(set)
+			return error_count + 1
+		}
+		if curr(set).tag == KEYWORD_COMMA { inc(set) }
+	}
 	inc(set)
-	inc(set)
-	//scope.returns = scope.decls
-	//scope.decls = make(a new map etc)
 
 	/* checking for left variables */
-	parse_variable_decl(set, scope)
-	inc(set)
-	//scope.left_args = scope.decls
-	//scope.decls = make(a new map etc)
+	if curr(set).tag == KEYWORD_OPEN_PAREN {
+		inc(set)
+		for curr(set).tag != KEYWORD_CLOSE_PAREN {
+			parse_variable_decl(set, &proc, SPEC_LINPUT)
+			if curr(set).tag != KEYWORD_CLOSE_PAREN && curr(set).tag != KEYWORD_COMMA {
+				print_error_line(set, "Expected a comma or closing parenthesis")
+				skip_statement(set)
+				return error_count + 1
+			}
+			if curr(set).tag == KEYWORD_COMMA { inc(set) }
+		}
+		inc(set)
+	}
 
 	/* registering function name */
+	if curr(set).tag != NONE {
+		print_error_line(set, "Expected procedure name")
+		skip_statement(set)
+		return error_count + 1
+	}
+	if !validate_name(set, scope) {
+		skip_statement(set)
+		return error_count + 1
+	}
+	proc.definition_location = curr(set)
 	inc(set)
 
 	/* checking for right variables */
-	inc(set)
-	parse_variable_decl(set, scope)
-	inc(set)
-	//scope.right_args = scope.decls
-	//scope.decls = make(a new map etc)
+	if curr(set).tag == KEYWORD_OPEN_PAREN {
+		inc(set)
+		for curr(set).tag != KEYWORD_CLOSE_PAREN {
+			parse_variable_decl(set, &proc, SPEC_RINPUT)
+			if curr(set).tag != KEYWORD_CLOSE_PAREN && curr(set).tag != KEYWORD_COMMA {
+				print_error_line(set, "Expected a comma or closing parenthesis")
+				skip_statement(set)
+				return error_count + 1
+			}
+			if curr(set).tag == KEYWORD_COMMA { inc(set) }
+		}
+		inc(set)
+	}
 
 	set.commas_and_parens_as_semis = false
-	// parse_proc_block(set, scope)
-	return finish_statement(set)
+	error_count += parse_asm(set, &proc)
+
+	add_proc_to_scope(scope, token_txt_str(proc.definition_location, set.text), proc)
+
+	//if !finish_statement(set) { error_count += 1 }
+	return error_count
 }
 
-func parse_variable_decl(set *Token_Set, scope *Scope) bool {
+func parse_variable_decl(set *Token_Set, scope *Scope, specialty Decl_Specialty) bool {
 	var new_decl Decl_Des
 	/* checking type */
 	// print_error_line("Decl?", set)
@@ -51,7 +91,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 
 	/* checking if there's an init constant */
 	if curr(set).tag != KEYWORD_EQUALS {
-		add_decl_to_scope(scope, name, new_decl)
+		add_decl_to_scope(scope, name, new_decl, specialty)
 		return finish_statement(set)
 	}
 	inc(set)
@@ -62,7 +102,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope) bool {
 	if !exists {
 		return skip_statement(set)
 	}
-	add_decl_to_scope(scope, name, new_decl)
+	add_decl_to_scope(scope, name, new_decl, specialty)
 
 	return finish_statement(set)
 }

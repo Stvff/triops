@@ -6,27 +6,20 @@ global _start
 section .text
 _start:
 	; Triops: Global variable intialization
-	sub rsp, 16; Triops: This is the size of all variables on the stack
+	sub rsp, 32; Triops: This is the size of all variables on the stack
 
-	; Triops: init `v1_1`
-	mov word [rsp + 0], 0
+	; Triops: init `greeting`
+	mov qword [rsp + 0], vardata.greeting + 8
+	mov qword [rsp + 8], 10
 
-	; Triops: init `v1_2`
-	mov word [rsp + 2], 1
-
-	; Triops: init `v1_3`
-	mov word [rsp + 4], 2
-
-	; Triops: init `v1_4`
-	mov word [rsp + 6], 3
-
-	; Triops: init `v2`
-	mov word [rsp + 8], 88
+	; Triops: init `h`
+	mov qword [rsp + 16], 0; Triops: zero init
 
 	; Triops: User code
+	nop
 
 	; Triops: leaving the stack as I found it
-	add rsp, 16; Triops: This was the size of all variables on the stack
+	add rsp, 32; Triops: This was the size of all variables on the stack
 
 	; Triops: Adding the unix exit, in case the user doesn't add one
 	mov rax, 60; Triops: 60 is exit
@@ -34,3 +27,7 @@ _start:
 	syscall
 
 section .data
+	vardata.greeting:
+		dq 0; Triops: Dynamic array, depth: 0
+		db 72, 105, 32, 116, 104, 101, 114, 101, 33, 10
+

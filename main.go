@@ -156,7 +156,7 @@ func main() {
 		case KEYWORD_SEMICOLON:
 		case NONE:
 			old_index := set.index
-			if !parse_variable_decl(&set, &global_scope) { error_count += 1 }
+			if !parse_variable_decl(&set, &global_scope, SPEC_NONE) { error_count += 1 }
 			if set.index == old_index {
 				print_error_line(&set, "Unknown type for global declaration")
 				error_count += 1
@@ -164,9 +164,10 @@ func main() {
 			}
 		case KEYWORD_OPEN_PAREN:
 			inc(&set)
-			if !parse_proc_decl(&set, &global_scope) { error_count += 1 }
+			error_count += parse_proc_decl(&set, &global_scope)
 		case KEYWORD_ASM: fallthrough
 		case KEYWORD_ENTRY:
+			inc(&set)
 			error_count += parse_asm(&set, &global_scope)
 			for _, lbl_token := range global_scope.label_uses {
 				this := where_is(&global_scope, token_txt_str(lbl_token, set.text))
@@ -189,6 +190,7 @@ func main() {
 	for name, value := range enum_values { fmt.Println(name, value) }
 	fmt.Println()/*
 	for name, decl := range global_scope.decls { fmt.Println(name, decl) }/*
+*/	fmt.Println(all_procs)/*
 	fmt.Println(all_values)
 */
 	if error_count == 0 {
@@ -303,25 +305,40 @@ func where_is(scope *Scope, name string) What {
 			return what
 		}
 	}
-	return What{"", NAME_NOT_HERE, 0}
+	prev_scope := scope.prev_scope
+	for prev_scope != nil {
+		/* TODO: Global variable management */
+		for _, what := range prev_scope.names {
+			if what.named_thing != NAME_DECL && what.named_thing != NAME_LABEL && what.name == name {
+				return what
+			}
+		}
+		prev_scope = prev_scope.prev_scope
+	}
+	return What{"", 0, NAME_NOT_HERE, SPEC_NONE}
 }
 
 func add_type_to_scope(scope *Scope, name string, ti Type_Index) {
 	all_types = append(all_types, ti)
-	scope.names = append(scope.names, What{name, NAME_TYPE, len(all_types)-1})
+	scope.names = append(scope.names, What{name, len(all_types)-1, NAME_TYPE, SPEC_NONE})
 }
 
 func add_enum_to_scope(scope *Scope, name string, enum_des Enum_Des) {
 	all_enums = append(all_enums, enum_des)
-	scope.names = append(scope.names, What{name, NAME_ENUM, len(all_enums)-1})
+	scope.names = append(scope.names, What{name, len(all_enums)-1, NAME_ENUM, SPEC_NONE})
 }
 
-func add_decl_to_scope(scope *Scope, name string, decl_des Decl_Des) {
+func add_decl_to_scope(scope *Scope, name string, decl_des Decl_Des, specialty Decl_Specialty) {
 	all_decls = append(all_decls, decl_des)
-	scope.names = append(scope.names, What{name, NAME_DECL, len(all_decls)-1})
+	scope.names = append(scope.names, What{name, len(all_decls)-1, NAME_DECL, specialty})
 }
 
 func add_label_to_scope(scope *Scope, name string, place int) {
 	all_labels = append(all_labels, place)
-	scope.names = append(scope.names, What{name, NAME_LABEL, len(all_labels)-1})
+	scope.names = append(scope.names, What{name, len(all_labels)-1, NAME_LABEL, SPEC_NONE})
+}
+
+func add_proc_to_scope(scope *Scope, name string, proc Scope) {
+	all_procs = append(all_procs, proc)
+	scope.names = append(scope.names, What{name, len(all_procs)-1, NAME_PROC, SPEC_NONE})
 }
