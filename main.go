@@ -6,16 +6,40 @@ import (
 )
 
 func main() {
-	file, err := os.ReadFile("error_test.trs")
-	// file, err := os.ReadFile("stest.trs")
+	if len(os.Args) < 2 || len(os.Args) > 3 {
+		fmt.Println("A lower level assembly macro programming language")
+		fmt.Println("\t\tUsage:")
+		fmt.Println("\t\t$ triops <file.trs> # Will compile `file.trs` to `file.nasm`")
+		fmt.Println("\t\t$ triops <file.trs> <output.nasm> # Will compile `file.trs` to `ouput.nasm`")
+		return
+	}
+
+	input_filename := os.Args[1]
+	output_filename := input_filename
+	if len(os.Args) == 3 {
+		output_filename = os.Args[2]
+	} else {
+		clippage := len(input_filename)-1;
+		for ; clippage > 0; clippage -= 1 {
+			if output_filename[clippage] == '.' {
+				break
+			}
+		}
+		if clippage >= 1 {
+			output_filename = output_filename[:clippage]
+		}
+		output_filename = fmt.Sprintf("%v.nasm", output_filename)
+	}
+
+	file, err := os.ReadFile(input_filename)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Triops: Couldn't read file `%v`", input_filename)
 		return
 	}
 	full_text := string(file)
 	if len(full_text) == 0 {
-		fmt.Println("Empty file, expected at least `entry`")
-		return;
+		fmt.Println("Triops: Empty file, expected at least `entry`")
+		return
 	}
 
 	tokens := make([]Token, 0)
@@ -170,7 +194,7 @@ func main() {
 	if error_count == 0 {
 		full_asm, _ := generate_assembly(&global_scope, &set, "entry")
 		// fmt.Println(full_asm)
-		err = os.WriteFile("asm/test.nasm", []byte(full_asm), 0666)
+		err = os.WriteFile(output_filename, []byte(full_asm), 0666)
 		if err != nil {
 			fmt.Println(err)
 			return

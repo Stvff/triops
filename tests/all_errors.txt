@@ -1,0 +1,139 @@
+Unexpected toplevel token:
+3 | for;
+    ^^^
+Name must not be a number, string or language keyword:
+17 | type;
+         ^
+The word `is` was expected:
+19 | type type_error;
+                    ^
+Type declarations expect the alignment and column size to be positive integers:
+21 | type type_error is;
+                       ^
+Enum does not exist:
+24 | type type_error is undefined;
+                        ^^^^^^^^^
+Value or type was not defined:
+24 | type type_error is undefined;
+                        ^^^^^^^^^
+Alignment can only be a power of two, up to 16:
+27 | type type_error is 6 bytes;
+                          ^^^^^
+Expected either the keyword `bytes` or `columns`:
+29 | type type_error is 4;
+                         ^
+Expected the keyword `bytes`:
+31 | type type_error is 3 columns of 4;
+                                      ^
+Expected a semicolon or typeform:
+33 | type type_error is 3 columns of 4 bytes intform;
+                                             ^^^^^^^
+Given type does not exist:
+44 | enum;
+         ^
+Name must not be a number, string or language keyword:
+46 | enum t1;
+            ^
+Enum must have a block of names (and optional values) or be a single assignment:
+48 | enum t1 enum_error;
+                       ^
+Invalid integer:
+50 | enum t1 enum_error1 = ;
+                           ^
+Names must not be reserved keywords or values:
+52 | enum t1 enum_error2 {for};
+                          ^^^
+Name is already in use in this enum:
+54 | enum t1 enum_error3 {a, a};
+                             ^
+Invalid integer:
+56 | enum t1 enum_error4 {a = };
+                              ^
+Expected a comma or closing brace:
+58 | enum t1 enum_error5 {a = 12 b};
+                                 ^
+Unknown type for global declaration:
+74 | type_error;
+     ^^^^^^^^^^
+Value for array size needs to be a positive integer:
+76 | t1['] decl_error;
+        ^
+Array size bracket not closed:
+78 | t1[3 decl_error;
+          ^^^^^^^^^^
+This enum is not a single constant, a subname needs to be specified:
+80 | t1 decl_error = e2;
+                       ^
+Invalid enum subname:
+82 | t1 decl_error = e2.;
+                        ^
+Enum subvalue does not exist:
+84 | t1 decl_error = e2.d;
+                        ^
+Type mismatch between declared variable and enum value:
+86 | t2 decl_error = e1;
+                     ^^
+This variable/constant does not allow string assignment:
+88 | t5[] decl_error = "abcd";
+                       ^^^^^^
+Given string was larger than the size of the array:
+90 | byte[3] decl_error = "abcd";
+                          ^^^^^^
+Value in array is malformed:
+92 | byte[4] decl_error = 10;
+                            ^
+Value in array is malformed:
+93 | byte[4] decl_error = {10,,};
+                              ^
+Unexpected token in array literal:
+95 | byte[4] decl_error = {10 word};
+                              ^^^^
+Too many values in static array literal (expected 4 values, got 5):
+97 | byte[4] decl_error = {1, 2, 3, 4, 5};
+                                        ^
+Too few values in static array literal (expected 4 values, got 3):
+99 | byte[4] decl_error = {1, 2, 3};
+                                  ^
+Expected a valid variable to bind a register to:
+111 | #reg undefined;
+           ^^^^^^^^^
+Total size of the variable to be bound must be less than 8 bytes (was 16):
+113 | #reg v5;
+           ^^
+Expected an `=`:
+115 | #reg v1;
+             ^
+Missing closing bracket:
+117 | add v1[0, v2;
+              ^
+A label has an alignment of 8, which is not the same as the alignment used in this instruction (4 bytes):
+119 | add v1, #lbl l1;
+                   ^^
+This register does not have the alignment expected in its context, It has 4 bytes, while 8 bytes was expected:
+121 | add #rq rax, #rd eax;
+                   ^^^
+Register must not be a keyword or value:
+123 | add #rq 1;
+              ^
+The maximum amount of arguments for assembly instructions is 3:
+125 | add v1, v2, v2, v1;
+                    ^
+This variable does not have the alignment expected in its context. It is aligned to 8 bytes, while 4 bytes was expected:
+127 | add v1, ptr;
+              ^^^
+Enum value does not have the alignment expected in its context. It is aligned to 4 bytes, while 1 bytes was expected:
+129 | add v6, e1;
+              ^^
+Enum or variable was not defined:
+131 | add v1, undefined;
+              ^^^^^^^^^
+Enum subvalue does not exist:
+133 | add v1, e2.d;
+                 ^
+Keyword, enum, variable or value was not defined or recognized:
+135 | add .;
+          ^
+Usage of a label that doesn't exist:
+137 | jmp #lbl undefined;
+               ^^^^^^^^^
+Amount of errors: 45

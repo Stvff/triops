@@ -6,6 +6,7 @@ char[] greeting = "Hi there!\n";
 enum int syscalls {write = 1, exit = 60};
 enum int streams { in, out, err };
 
+#*
 (int errorcode) (int stream) write (char[0] data, int length) asm {
 	#reg data = rsi;
 	#reg length = rax;
@@ -16,3 +17,6 @@ enum int streams { in, out, err };
 }
 
 entry write greeting.data, greeting.count;
+*#
+
+entry nop;
