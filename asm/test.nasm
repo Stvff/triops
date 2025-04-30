@@ -8,12 +8,22 @@ _start:
 	; Triops: Global variable intialization
 	sub rsp, 16; Triops: This is the size of all variables on the stack
 
-	; Triops: init `greeting`
-	mov qword [rsp + 0], vardata.greeting + 8
-	mov qword [rsp + 8], 10
+	; Triops: init `v1_1`
+	mov word [rsp + 0], 0
+
+	; Triops: init `v1_2`
+	mov word [rsp + 2], 1
+
+	; Triops: init `v1_3`
+	mov word [rsp + 4], 2
+
+	; Triops: init `v1_4`
+	mov word [rsp + 6], 3
+
+	; Triops: init `v2`
+	mov word [rsp + 8], 88
 
 	; Triops: User code
-	nop
 
 	; Triops: leaving the stack as I found it
 	add rsp, 16; Triops: This was the size of all variables on the stack
@@ -24,7 +34,3 @@ _start:
 	syscall
 
 section .data
-	vardata.greeting:
-		dq 0; Triops: Dynamic array, depth: 0
-		db 72, 105, 32, 116, 104, 101, 114, 101, 33, 10
-

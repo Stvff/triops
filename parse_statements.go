@@ -246,7 +246,7 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 	inc(set)
 
 	/* enum values */
-	for curr(set).tag != KEYWORD_CLOSE_BRACE && !set.end {
+	for first := true; curr(set).tag != KEYWORD_CLOSE_BRACE && !set.end; first = false {
 		//print_error_line("test", tokens[index], scope)
 		if curr(set).tag != NONE {
 			print_error_line(set, "Names must not be reserved keywords or values")
@@ -272,7 +272,11 @@ func parse_enum_decl(set *Token_Set, scope *Scope) bool {
 			value = integer_to_sized_value(integer, size_of_type(typ))
 			enum_values[evid] = value
 		} else {
-			value = increment_value(value)
+			if first {
+				value = integer_to_sized_value(0, size_of_type(typ))
+			} else {
+				value = increment_value(value)
+			}
 			enum_values[evid] = value
 		}
 

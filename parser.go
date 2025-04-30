@@ -7,7 +7,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 	value, enum_typ, exists = resolve_enum_value(set, scope)
 	if exists {
 		if !are_types_equal(ti, enum_typ) {
-			/*TODO: print definitions*/
+			/* TODO: print definitions */
 			print_error_line(set, "Type mismatch between declared variable and enum value")
 			return value, false
 		}
@@ -16,7 +16,7 @@ func resolve_decl_value(set *Token_Set, scope *Scope, ti Type_Index) (value Valu
 		set.index = old_index
 		return value, false
 	}
-	
+
 	tag_associated_index, tag := unpack_ti(ti)
 	value = Value{form : VALUE_FORM_NONE, pos : value_head}
 	tagswitch: switch tag {

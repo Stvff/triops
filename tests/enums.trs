@@ -1,0 +1,10 @@
+type u16 is 2 bytes;
+
+enum u16 e1 {a, b, c, d};
+enum u16 e2 = 88;
+
+u16 v1_1 = e1.a;
+u16 v1_2 = e1.b;
+u16 v1_3 = e1.c;
+u16 v1_4 = e1.d;
+u16 v2 = e2;
