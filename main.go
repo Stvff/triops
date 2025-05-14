@@ -8,9 +8,9 @@ import (
 func main() {
 	if len(os.Args) < 2 || len(os.Args) > 3 {
 		fmt.Println("A lower level assembly macro programming language")
-		fmt.Println("\t\tUsage:")
-		fmt.Println("\t\t$ triops <file.trs> # Will compile `file.trs` to `file.nasm`")
-		fmt.Println("\t\t$ triops <file.trs> <output.nasm> # Will compile `file.trs` to `ouput.nasm`")
+		fmt.Println("        Usage:")
+		fmt.Println("        $ triops <file.trs> # Will compile `file.trs` to `file.nasm`")
+		fmt.Println("        $ triops <file.trs> <output.nasm> # Will compile `file.trs` to `ouput.nasm`")
 		return
 	}
 
