@@ -6,18 +6,56 @@ var (
 	all_decls  []Decl_Des
 	all_labels []int
 	all_procs  []Scope
+
+	all_nodes []Node
 )
 
 type Scope struct {
 	prev_scope *Scope
 	definition_location Token
+	precedence int8
+	is_inline bool
 	names []What
 	label_uses []Token
 //	imports map[string]*Scope
 //	code Code_Block
 	assembly Asm_Block
+	code []Link
 }
 
+/*** GENERIC ***/
+type Link struct {
+	kind Link_Kind
+	left int
+	right int
+}
+type Link_Kind int8
+const (
+	LKIND_NONE = 1
+	LKIND_LEFT_ARG = 1 + iota
+	LKIND_RIGHT_ARG
+	LKIND_COMMA
+	LKIND_INDEX
+)
+
+type Node struct {
+	kind Node_Kind
+	token Token
+	imm Value
+	satisfied_left int
+	satisfied_right int
+}
+type Node_Kind int8
+const (
+	NKIND_NONE = 1
+	NKIND_IMMEDIATE = 1 + iota
+	NKIND_PROCEDURE
+	NKIND_VARIABLE
+	NKIND_LABEL
+)
+/*** GENERIC ***/
+
+/*** ASM ***/
 type Asm_Block struct {
 	instructions []Asm_Instruction
 }
@@ -33,6 +71,7 @@ type Asm_Instruction struct {
 	alignment int
 	args [3]Asm_Arg
 }
+/*** ASM end ***/
 
 var global_enum_id int = 0
 var enum_values map[Enum_Value_ID]Value = make(map[Enum_Value_ID]Value)

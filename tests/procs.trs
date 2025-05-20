@@ -15,6 +15,13 @@ enum int streams { in, out, err };
 	mov errorcode, #rq rsi; ## I don't actually know where the return of the write syscall is
 }
 
+(int c) (int a) + (int b) prec 10 asm {
+	#reg c = rax;
+	#reg a = rax;
+	#reg b = rbx;
+	add a, b;
+}
+
 int h;
 () write2;
 () () write3;

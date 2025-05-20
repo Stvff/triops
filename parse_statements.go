@@ -60,8 +60,28 @@ func parse_proc_decl(set *Token_Set, scope *Scope) int {
 		}
 		inc(set)
 	}
-
 	set.commas_and_parens_as_semis = false
+
+	if curr(set).tag == KEYWORD_PREC {
+		precedence, exists := resolve_integer(inc(set), scope)
+		if !exists {
+			print_error_line(set, "Expected an integer to set the precedence to")
+			skip_statement(set)
+			return error_count + 1
+		}
+		if precedence < -126 || precedence > 127 {
+			print_error_line(set, "Precedence value should be between -126 and 127")
+			skip_statement(set)
+			return error_count + 1
+		}
+		proc.precedence = int8(precedence)
+		inc(set)
+	}
+
+	if curr(set).tag == KEYWORD_ASM {
+		proc.is_inline = true
+		inc(set)
+	}
 	error_count += parse_asm(set, &proc)
 
 	add_proc_to_scope(scope, token_txt_str(proc.definition_location, set.text), proc)

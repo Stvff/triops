@@ -82,7 +82,7 @@ func main() {
 		if char == '#' && is_alphabetic(rune(full_text[i+1])) { continue }
 		if lang_operator(char) {
 			if token.len > 1 { token.len -= 1; i -= 1 } 
-			token.tag = keywords[token_txt_str(token, full_text)]
+			token.tag = keywords[token_txt_str(token, full_text)] /* TODO: anytime keywords[] is checked, also check for # if it isn't a keyword, then error */
 			tokens = append(tokens, token)
 			token = Token{0, 0, 0}
 			continue
@@ -190,7 +190,7 @@ func main() {
 	for name, value := range enum_values { fmt.Println(name, value) }
 	fmt.Println()/*
 	for name, decl := range global_scope.decls { fmt.Println(name, decl) }/*
-*/	fmt.Println(all_procs)/*
+	fmt.Println(all_procs)/*
 	fmt.Println(all_values)
 */
 	if error_count == 0 {
