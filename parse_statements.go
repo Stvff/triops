@@ -69,8 +69,8 @@ func parse_proc_decl(set *Token_Set, scope *Scope) int {
 			skip_statement(set)
 			return error_count + 1
 		}
-		if precedence < -126 || precedence > 127 {
-			print_error_line(set, "Precedence value should be between -126 and 127")
+		if precedence < -128 || precedence > 127 {
+			print_error_line(set, "Precedence value should be between -128 and 127")
 			skip_statement(set)
 			return error_count + 1
 		}

@@ -12,14 +12,13 @@ enum int streams { in, out, err };
 	#reg stream = rdi;
 	mov #rq rax, syscalls.write;
 	syscall;
-	mov errorcode, #rq rsi; ## I don't actually know where the return of the write syscall is
+	mov errorcode, #rq rax;
 }
 
 (int c) (int a) + (int b) prec 10 asm {
-	#reg c = rax;
 	#reg a = rax;
-	#reg b = rbx;
 	add a, b;
+	mov c, a;
 }
 
 int h;
@@ -32,6 +31,10 @@ int h;
 #*
 
 entry write greeting.data, greeting.count;
+entry {
+	int a = streams.out write greeting.data, greeting.count;
+}
+
 *#
 
 entry nop;

@@ -1,5 +1,29 @@
 package main
 
+func parse_asm2(set *Token_Set, scope *Scope) int {
+/*	single_statement := false
+	if curr(set).tag == KEYWORD_SEMICOLON {
+		return 0
+	} else if curr(set).tag != KEYWORD_OPEN_BRACE {
+		single_statement = true
+	} else {
+		set.codebraces += 1
+		inc(set)
+	}
+	error_count := 0
+
+	statloop: for ; !set.end ; inc(set) {
+		token := curr(set)
+		var node Node
+		node.token = token
+		
+		switch token.tag {
+			
+		}
+	} /* statement loop */
+	return 0
+}
+
 func parse_asm(set *Token_Set, scope *Scope) int {
 	single_statement := false
 	if curr(set).tag == KEYWORD_SEMICOLON {

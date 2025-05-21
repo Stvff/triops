@@ -1,0 +1,13 @@
+type byte is 1 bytes;
+type char is 1 bytes #stringform;
+type string is char[];
+
+type s8  is 1 bytes #intform;
+type s16 is 2 bytes #intform;
+type s32 is 4 bytes #intform;
+type s64 is 8 bytes #intform;
+
+type rawptr is byte[0];
+
+type f32 is 4 bytes #floatform;
+type f64 is 8 bytes #floatform;
