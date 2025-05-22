@@ -2,23 +2,62 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"os"
+	"os/exec"
 )
 
+const triops_help_message = `A lower level assembly macro programming language
+
+        Usage:
+        $ triops <file.trs> [options]                # Compile 'file.trs' to 'file'
+        $ triops <file.trs> <output> [options]       # Compile 'file.trs' to 'ouput'
+        $ triops <file.trs> <output.nasm> [options]  # Transpile 'file.trs' to 'ouput.nasm', doesn't generate an executable
+
+        Options:
+        -small  # Package the executable to be small
+        -run    # Run the executable after compiling
+
+`
+
 func main() {
-	if len(os.Args) < 2 || len(os.Args) > 3 {
-		fmt.Println("A lower level assembly macro programming language")
-		fmt.Println("        Usage:")
-		fmt.Println("        $ triops <file.trs> # Will compile `file.trs` to `file.nasm`")
-		fmt.Println("        $ triops <file.trs> <output.nasm> # Will compile `file.trs` to `ouput.nasm`")
-		return
+	if len(os.Args) < 2 {
+		fmt.Print(triops_help_message)
+		os.Exit(1)
 	}
+
+	make_small_exe := false
+	generate_executable := true
+	output_provided := false
+	run_executable := false
 
 	input_filename := os.Args[1]
 	output_filename := input_filename
-	if len(os.Args) == 3 {
-		output_filename = os.Args[2]
-	} else {
+	if len(os.Args) > 2 {
+		for _, arg := range os.Args[2:] {
+			if arg == "-small" {
+				make_small_exe = true
+				continue
+			}
+			if arg == "-run" {
+				run_executable = true
+				continue
+			}
+			if output_provided {
+				fmt.Printf("Triops: An output file (`%v`) was already provided\n", output_filename)
+				fmt.Print(triops_help_message)
+				os.Exit(1)
+			}
+			output_filename = arg
+			output_provided = true
+		}
+		l := len(output_filename)
+		if l > 5 && output_filename[l - 5:] == ".nasm" {
+			generate_executable = false
+		}
+	}
+
+	if !output_provided {
 		clippage := len(input_filename)-1;
 		for ; clippage > 0; clippage -= 1 {
 			if output_filename[clippage] == '.' {
@@ -28,18 +67,19 @@ func main() {
 		if clippage >= 1 {
 			output_filename = output_filename[:clippage]
 		}
-		output_filename = fmt.Sprintf("%v.nasm", output_filename)
+		//output_filename = fmt.Sprintf("%v.nasm", output_filename)
 	}
 
 	file, err := os.ReadFile(input_filename)
 	if err != nil {
 		fmt.Printf("Triops: Couldn't read file `%v`", input_filename)
-		return
+		fmt.Print(triops_help_message)
+		os.Exit(1)
 	}
 	full_text := string(file)
 	if len(full_text) == 0 {
 		fmt.Println("Triops: Empty file, expected at least `entry`")
-		return
+		os.Exit(1)
 	}
 
 	tokens := make([]Token, 0)
@@ -132,7 +172,7 @@ func main() {
 	}
 	if len(tokens) == 0 {
 		fmt.Println("There is no code in this file (only comments), expected at least `entry`")
-		return;
+		os.Exit(1)
 	}
 
 	var global_scope Scope
@@ -193,16 +233,73 @@ func main() {
 	fmt.Println(all_procs)/*
 	fmt.Println(all_values)
 */
-	if error_count == 0 {
-		full_asm, _ := generate_assembly(&global_scope, &set, "entry")
-		// fmt.Println(full_asm)
-		err = os.WriteFile(output_filename, []byte(full_asm), 0666)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	} else {
+	if error_count != 0 {
 		fmt.Printf("Amount of errors: %v\n", error_count)
+		os.Exit(1)
+	}
+
+	full_asm, _ := generate_assembly(&global_scope, &set, "entry", make_small_exe)
+
+	nasm_filename := output_filename
+	if generate_executable { nasm_filename = fmt.Sprintf("%v.nasm", nasm_filename) }
+	err = os.WriteFile(nasm_filename, []byte(full_asm), 0666)
+	if err != nil {
+		fmt.Printf("Triops: Could not write `%v` to disk:\n", nasm_filename)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var program_output strings.Builder
+	if generate_executable && make_small_exe {
+		cmd := exec.Command("nasm", "-f", "bin", "-o", output_filename, nasm_filename)
+		cmd.Stdout = &program_output
+		err := cmd.Run()
+		if err != nil {
+			fmt.Printf("Triops: nasm error `%v`:\n", err)
+			fmt.Print(program_output.String())
+			os.Exit(1)
+		}
+		os.Remove(nasm_filename)
+
+		cmd = exec.Command("chmod", "+x", output_filename)
+		cmd.Stdout = &program_output
+		err = cmd.Run()
+		if err != nil {
+			fmt.Printf("Triops: chmod error `%v`:\n", err)
+			fmt.Print(program_output.String())
+			os.Remove(output_filename)
+			os.Exit(1)
+		}
+	}
+		
+	if generate_executable && !make_small_exe {
+		object_filename := fmt.Sprintf("%v.o", output_filename)
+		cmd := exec.Command("nasm", "-f", "elf64", "-o", object_filename, nasm_filename)
+		cmd.Stdout = &program_output
+		err := cmd.Run()
+		if err != nil {
+			fmt.Printf("Triops: nasm error `%v`:\n", err)
+			fmt.Print(program_output.String())
+			os.Exit(1)
+		}
+		os.Remove(nasm_filename)
+
+		cmd = exec.Command("ld", "-o", output_filename, object_filename)
+		cmd.Stdout = &program_output
+		err = cmd.Run()
+		os.Remove(object_filename)
+		if err != nil {
+			fmt.Printf("Triops: ld error `%v`:\n", err)
+			fmt.Print(program_output.String())
+			os.Exit(1)
+		}
+	}
+
+	if generate_executable && run_executable {
+		cmd := exec.Command(fmt.Sprintf("./%v", output_filename))
+		cmd.Stdout = &program_output
+		cmd.Run()
+		fmt.Print(program_output.String())
 	}
 }
 
