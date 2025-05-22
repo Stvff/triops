@@ -72,7 +72,7 @@ func main() {
 
 	file, err := os.ReadFile(input_filename)
 	if err != nil {
-		fmt.Printf("Triops: Couldn't read file `%v`", input_filename)
+		fmt.Printf("Triops: Couldn't read file `%v`\n", input_filename)
 		fmt.Print(triops_help_message)
 		os.Exit(1)
 	}
