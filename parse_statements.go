@@ -92,16 +92,87 @@ func parse_proc_decl(set *Token_Set, scope *Scope) int {
 
 func parse_variable_decl(set *Token_Set, scope *Scope, specialty Decl_Specialty) bool {
 	var new_decl Decl_Des
-	/* checking type */
+	var exists bool
 	// print_error_line("Decl?", set)
-	this := where_is(scope, token_str(set))
-	exists := this.named_thing == NAME_TYPE
-	if !exists {
-		return false
-	}
-	new_decl.typ, exists = parse_type(set, scope)
-	if !exists {
-		return skip_statement(set)
+
+	if curr(set).tag == KEYWORD_REGISTER {
+		var register Reg_Des
+		/* get register name */
+		inc(set)
+		if !validate_name(set, scope) { return skip_statement(set) }
+		register.token = curr(set)
+		if curr(inc(set)).tag != KEYWORD_IS {
+			print_error_line(set, "The word `is` was expected")
+			return skip_statement(set)
+		}
+		inc(set)
+
+		/* checking type */
+		this := where_is(scope, token_str(set))
+		exists = this.named_thing == NAME_TYPE
+		if !exists {
+			/* in case of just a size */
+			integer, exists := resolve_integer(set, scope)
+			if !exists {
+				return skip_statement(set)
+			}
+			if integer != 1 && integer != 2 && integer != 4 && integer != 8 && integer != 16 {
+				print_error_line(set, "Register size can only be a power of two, up to 16")
+				return skip_statement(set)
+			}
+			if curr(inc(set)).tag != KEYWORD_BYTES {
+				print_error_line(set, "The word `bytes` was expected")
+				return skip_statement(set)
+			}
+			inc(set)
+			register.size = integer
+			add_reg_to_scope(scope, token_txt_str(register.token, set.text), register, specialty)
+			return finish_statement(set)
+		}
+		new_decl.typ, exists = parse_type(set, scope)
+		if !exists {
+			return skip_statement(set)
+		}
+		register.typ = new_decl.typ
+
+		add_reg_to_scope(scope, token_txt_str(register.token, set.text), register, specialty)
+		if curr(set).tag == KEYWORD_SEMICOLON {
+			return true
+		}
+	} else {
+		/* checking type */
+		this := where_is(scope, token_str(set))
+		register_size := 0
+		register_type := Type_Index(0)
+		if this.named_thing == NAME_REG {
+			new_decl.bound_register = all_registers[this.index].token
+			register_size = all_registers[this.index].size
+			register_type = all_registers[this.index].typ
+			inc(set)
+		}
+
+		this = where_is(scope, token_str(set))
+		exists = this.named_thing == NAME_TYPE
+		if register_type == 0 {
+			if !exists {
+				print_error_line(set, "Unexpected token while looking for a type")
+				return skip_statement(set)
+			}
+			new_decl.typ, exists = parse_type(set, scope)
+			if !exists {
+				return skip_statement(set)
+			}
+			if register_size != 0 && register_size != size_of_type(new_decl.typ) {
+				print_error_line(set, "The given register does not have the same size as the given type (%v bytes vs %v bytes)", register_size, size_of_type(new_decl.typ))
+				return skip_statement(set)
+			}
+		} else {
+			if exists {
+				print_error_line(set, "Type was already given by register")
+				return skip_statement(set)
+			}
+			new_decl.typ = register_type
+		}
 	}
 
 	/* getting the name */

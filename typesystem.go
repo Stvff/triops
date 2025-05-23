@@ -45,7 +45,7 @@ type Type_Des_St_Array struct{
 type Type_Des_Pointer struct{
 	target Type_Index
 }
-/*
+/* TODO: structs (see a minor amount of notes here)
 type Type_Des_Struct struct{
 	name string
 	decls []Decl_Des
@@ -168,6 +168,35 @@ func follow_type(ti Type_Index) Type_Index {
 		i, t = unpack_ti(ti)
 	}
 	return ti
+}
+
+func follow_indirection_type(ti Type_Index) (origin Type_Index, next Type_Index) {
+	i, t := unpack_ti(ti)
+	for t == TYPE_INDIRECT {
+		ti = indirect_types[i].target
+		i, t = unpack_ti(ti)
+	}
+	var ti_next Type_Index
+	switch t {
+		case TYPE_ERR: panic("follow_indirection_type: internal type error")
+		case TYPE_BARE:
+			ti_next = ti
+		case TYPE_INDIRECT: panic("follow_indirection_type: this should have been dealt with already")
+		case TYPE_RT_ARRAY:
+			ti_next = rt_array_types[i].target
+		case TYPE_ST_ARRAY:
+			ti_next = st_array_types[i].target
+		case TYPE_POINTER:
+			ti_next = pointer_types[i].target
+		case TYPE_STRUCT:
+			panic("follow_indirection_type: struct")
+	}
+	i, t = unpack_ti(ti_next)
+	for t == TYPE_INDIRECT {
+		ti_next = indirect_types[i].target
+		i, t = unpack_ti(ti_next)
+	}
+	return ti, ti_next
 }
 
 func append_bare_type(typ Type_Des_Bare) Type_Index {

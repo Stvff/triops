@@ -1,11 +1,12 @@
 package main
 
 var (
-	all_types  []Type_Index
-	all_enums  []Enum_Des
-	all_decls  []Decl_Des
-	all_labels []int
-	all_procs  []Scope
+	all_types     []Type_Index
+	all_enums     []Enum_Des
+	all_decls     []Decl_Des
+	all_registers []Reg_Des
+	all_labels    []int
+	all_procs     []Scope
 
 	all_nodes []Node
 )
@@ -18,12 +19,9 @@ type Scope struct {
 	names []What
 	label_uses []Token
 //	imports map[string]*Scope
-//	code Code_Block
-	assembly Asm_Block
 	code []Link
 }
 
-/*** GENERIC ***/
 type Link struct {
 	kind Link_Kind
 	left int
@@ -37,13 +35,13 @@ const (
 	LKIND_INDEX
 	LKIND_COMMA
 	LKIND_SEMICOLON
-	LKIND_ASM_TOGGLE
 )
 
 type Node struct {
 	kind Node_Kind
 	token Token
 	imm Value
+	ti Type_Index
 	satisfied_left int
 	satisfied_right int
 }
@@ -51,29 +49,13 @@ type Node_Kind int8
 const (
 	NKIND_NONE = 1
 	NKIND_IMMEDIATE = 1 + iota
+	NKIND_INDEX
+	NKIND_MNEMONIC
 	NKIND_PROCEDURE
 	NKIND_VARIABLE
+	NKIND_REGISTER
 	NKIND_LABEL
 )
-/*** GENERIC ***/
-
-/*** ASM ***/
-type Asm_Block struct {
-	instructions []Asm_Instruction
-}
-
-/* this'd be sized [4][8]byte */
-type Asm_Arg struct {
-	verbatim Token
-	immediate Value
-}
-
-type Asm_Instruction struct {
-	mnemonic Token
-	alignment int
-	args [3]Asm_Arg
-}
-/*** ASM end ***/
 
 var global_enum_id int = 0
 var enum_values map[Enum_Value_ID]Value = make(map[Enum_Value_ID]Value)
@@ -91,7 +73,13 @@ type Enum_Value_ID struct {
 type Decl_Des struct {
 	typ Type_Index
 	init Value
-	bound_register Token
+	bound_register Token /* TODO: remove this as soon as new codegen is in place */
+}
+
+type Reg_Des struct {
+	token Token
+	size int /* if size == 0, it has a type */
+	typ Type_Index
 }
 
 type What struct {
@@ -104,6 +92,7 @@ type Named_Thing int8;
 const (
 	NAME_NOT_HERE = 0
 	NAME_TYPE = 1 + iota
+	NAME_REG
 	NAME_ENUM
 	NAME_DECL
 	NAME_LABEL
@@ -121,6 +110,7 @@ type Token_Tag int16
 var keywords = map[string]Token_Tag {
 	"import"  : KEYWORD_IMPORT,
 	"type"    : KEYWORD_TYPE,
+	"register": KEYWORD_REGISTER,
 	"struct"  : KEYWORD_STRUCT,
 	"enum"    : KEYWORD_ENUM,
 	"entry"   : KEYWORD_ENTRY,
@@ -163,13 +153,6 @@ var keywords = map[string]Token_Tag {
 	"#floatform"  : DIRECTIVE_FLOATFORM,
 	"#stringform" : DIRECTIVE_STRINGFORM,
 
-	"#rb" : DIRECTIVE_REG_BYTE,
-	"#rw" : DIRECTIVE_REG_WORD,
-	"#rd" : DIRECTIVE_REG_DOUB,
-	"#rq" : DIRECTIVE_REG_QUAD,
-	"#ro" : DIRECTIVE_REG_OCTO,
-	"#reg": DIRECTIVE_REG,
-
 	"#lbl" : DIRECTIVE_LBL,
 
 	"#type"      : DIRECTIVE_TYPE,
@@ -184,6 +167,7 @@ const (
 	KEYWORDS_START = 1 + iota
 		KEYWORD_IMPORT
 		KEYWORD_TYPE
+		KEYWORD_REGISTER
 		KEYWORD_STRUCT
 		KEYWORD_ENUM
 		KEYWORD_ENTRY
@@ -228,15 +212,6 @@ const (
 		DIRECTIVE_FLOATFORM
 		DIRECTIVE_STRINGFORM
 		DIRECTIVE_BYTEFORM
-
-		DIRECTIVE_REGS_START
-			DIRECTIVE_REG_BYTE
-			DIRECTIVE_REG_WORD
-			DIRECTIVE_REG_DOUB
-			DIRECTIVE_REG_QUAD
-			DIRECTIVE_REG_OCTO
-			DIRECTIVE_REG
-		DIRECTIVE_REGS_END
 
 		DIRECTIVE_LBL
 

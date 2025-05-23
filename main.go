@@ -194,12 +194,13 @@ func main() {
 			inc(&set)
 			if !parse_enum_decl(&set, &global_scope) { error_count += 1 }
 		case KEYWORD_SEMICOLON:
-		case NONE:
+		case KEYWORD_REGISTER, NONE:
 			old_index := set.index
 			if !parse_variable_decl(&set, &global_scope, SPEC_NONE) { error_count += 1 }
 			if set.index == old_index {
 				print_error_line(&set, "Unknown type for global declaration")
 				error_count += 1
+				skip_statement(&set)
 //				print_error_line("Runtime expressions are not allowed in the global scope (`entry` would be the place for that)", tokens[i], &global_scope)
 			}
 		case KEYWORD_OPEN_PAREN:
@@ -212,7 +213,7 @@ func main() {
 			for _, lbl_token := range global_scope.label_uses {
 				this := where_is(&global_scope, token_txt_str(lbl_token, set.text))
 				if this.named_thing != NAME_LABEL {
-					print_error_line_token_txt(lbl_token, set.text, "Usage of a label that doesn't exist")
+					print_error_line_token_txt(lbl_token, set.text, "Undefined name")
 					error_count += 1
 				}
 			}
@@ -396,6 +397,15 @@ func dec(set *Token_Set) *Token_Set {
 	return set
 }
 
+func append_node(node Node) int {
+	all_nodes = append(all_nodes, node)
+	return len(all_nodes)-1
+}
+
+func add_link(scope *Scope, link Link) {
+	scope.code = append(scope.code, link)
+}
+
 func where_is(scope *Scope, name string) What {
 	for _, what := range scope.names {
 		if what.name == name {
@@ -428,6 +438,11 @@ func add_enum_to_scope(scope *Scope, name string, enum_des Enum_Des) {
 func add_decl_to_scope(scope *Scope, name string, decl_des Decl_Des, specialty Decl_Specialty) {
 	all_decls = append(all_decls, decl_des)
 	scope.names = append(scope.names, What{name, len(all_decls)-1, NAME_DECL, specialty})
+}
+
+func add_reg_to_scope(scope *Scope, name string, register_des Reg_Des, specialty Decl_Specialty) {
+	all_registers = append(all_registers, register_des)
+	scope.names = append(scope.names, What{name, len(all_registers)-1, NAME_REG, specialty})
 }
 
 func add_label_to_scope(scope *Scope, name string, place int) {
