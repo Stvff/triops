@@ -45,7 +45,7 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 					if single_statement { break statloop } else { continue statloop }
 				}
 				mnm_node.token = curr(set)
-				mnm_node.token.tag = DIRECTIVE_LBL
+				mnm_node.kind = NKIND_LABEL
 				mnm_index = append_node(mnm_node)
 				add_label_to_scope(scope, token_str(set), mnm_index)
 			default:
@@ -57,11 +57,11 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 	
 			/* link to previous mnemonic */
 			var mnm_link Link;
+			mnm_link.kind = LKIND_SEMICOLON
 			mnm_link.right = mnm_index
 			for i := len(scope.code)-1; i > 0; i -= 1 {
 				link := scope.code[i]
 				if link.kind == LKIND_SEMICOLON {
-					mnm_link.kind = LKIND_SEMICOLON
 					mnm_link.left = link.right
 					break
 				}
@@ -69,8 +69,8 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 			if mnm_link.kind == LKIND_NONE && len(scope.code) > 1 {
 				/* this should only really happen if this is the second toplevel token */
 				mnm_link.left = 0
-				add_link(scope, mnm_link)
 			}
+			add_link(scope, mnm_link)
 			if single_statement {break statloop} else {continue statloop}
 		}
 
@@ -100,20 +100,24 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 			node.imm = integer_to_value(offset)
 
 			previous_node := all_nodes[len(all_nodes)-1]
-			if previous_node.kind != NKIND_VARIABLE && previous_node.kind != NKIND_INDEX {
+			origin, next := follow_indirection_type(previous_node.ti)
+			_, origin_t := unpack_ti(origin)
+			if !(previous_node.kind == NKIND_REGISTER && origin_t == TYPE_POINTER) &&
+			   !(previous_node.kind == NKIND_VARIABLE || previous_node.kind == NKIND_INDEX) {
 				error_count += 1
-				print_error_line(set, "Only non-register variables can be indexed")
+				print_error_line(set, "Only variables and pointer registers can be indexed")
 				skip_statement(set)
 				if single_statement {break statloop} else {continue statloop}
 			}
-			origin, next := follow_indirection_type(previous_node.ti)
-			_, origin_t := unpack_ti(origin)
 			wrong_type := false
 			switch origin_t {
 				case TYPE_RT_ARRAY: wrong_type = true
 					print_error_line(set, "Dynamic arrays cannot be directly indexed in assembly blocks (since it would generate multiple instructions)")
-				case TYPE_POINTER: wrong_type = true
-					print_error_line(set, "Pointers cannot be directly indexed in assembly blocks (since it would generate multiple instructions)")
+				case TYPE_POINTER:
+					if previous_node.kind != NKIND_REGISTER {
+						wrong_type = true
+						print_error_line(set, "Pointer variables cannot be directly indexed in assembly blocks (since it would generate multiple instructions)")
+					}
 				case TYPE_STRUCT: wrong_type = true
 					print_error_line(set, "Structs cannot be directly indexed")
 			}
@@ -180,7 +184,6 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 				skip_statement(set)
 				if single_statement {break statloop} else {continue statloop}
 			}
-			all_nodes[mnm_index].satisfied_right += 1
 			argument_body_supplied = false
 
 		/* subscripting */
@@ -214,7 +217,7 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 			if subscription == "data" {
 				node.imm = integer_to_value(0)
 			} else if subscription == "count" {
-				node.imm = integer_to_value(0)
+				node.imm = integer_to_value(1)
 			} else {
 				error_count += 1
 				print_error_line(set, "Unrecognized subscript")
@@ -241,6 +244,7 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 				if single_statement {break statloop} else {continue statloop}
 			}
 			argument_body_supplied = true
+			all_nodes[mnm_index].satisfied_right += 1
 			integer, exists := resolve_integer(set, scope)
 			if !exists {
 				error_count += 1
@@ -261,15 +265,16 @@ func parse_asm(set *Token_Set, scope *Scope) int {
 				if single_statement {break statloop} else {continue statloop}
 			}
 			argument_body_supplied = true
+			all_nodes[mnm_index].satisfied_right += 1
 			this := where_is(scope, token_str(set))
 			switch this.named_thing {
 			case NAME_DECL: /* variables */
 				decl := all_decls[this.index]
-				if decl.bound_register.len == 0 {
-					node.kind = NKIND_VARIABLE
-				} else {
+				if decl.has_bound_register {
 					node.kind = NKIND_REGISTER
-					node.token = decl.bound_register
+					node.token = all_registers[decl.bound_register].token
+				} else {
+					node.kind = NKIND_VARIABLE
 				}
 				node.ti = decl.typ
 

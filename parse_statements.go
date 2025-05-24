@@ -101,6 +101,7 @@ func parse_variable_decl(set *Token_Set, scope *Scope, specialty Decl_Specialty)
 		inc(set)
 		if !validate_name(set, scope) { return skip_statement(set) }
 		register.token = curr(set)
+		new_decl.has_bound_register = true
 		if curr(inc(set)).tag != KEYWORD_IS {
 			print_error_line(set, "The word `is` was expected")
 			return skip_statement(set)
@@ -139,13 +140,15 @@ func parse_variable_decl(set *Token_Set, scope *Scope, specialty Decl_Specialty)
 		if curr(set).tag == KEYWORD_SEMICOLON {
 			return true
 		}
+		new_decl.bound_register = len(all_registers)-1
 	} else {
 		/* checking type */
 		this := where_is(scope, token_str(set))
 		register_size := 0
 		register_type := Type_Index(0)
 		if this.named_thing == NAME_REG {
-			new_decl.bound_register = all_registers[this.index].token
+			new_decl.has_bound_register = true
+			new_decl.bound_register = this.index
 			register_size = all_registers[this.index].size
 			register_type = all_registers[this.index].typ
 			inc(set)

@@ -72,8 +72,9 @@ type Enum_Value_ID struct {
 
 type Decl_Des struct {
 	typ Type_Index
+	has_bound_register bool
 	init Value
-	bound_register Token /* TODO: remove this as soon as new codegen is in place */
+	bound_register int
 }
 
 type Reg_Des struct {

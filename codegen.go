@@ -7,154 +7,129 @@ import (
 )
 
 type Var_Pos struct {
-	l2_alignment int
+	is_on_stack bool
 	index int
 	reg string
-}
-
-var l2_to_align = [5]int{1, 2, 4, 8, 16}
-
-type Var_Amounts struct {
-	vars_1B, vars_2B, vars_4B, vars_8B, vars_16B int
-//	frame_size int
 }
 
 type Nasm struct {
 	text_sec strings.Builder
 	data_sec strings.Builder
-	stack_offsets [6]int
+	stack_size int
 	var_poss map[string]Var_Pos
 }
 
 func generate_assembly(scope *Scope, set *Token_Set, scope_path string, make_small_exe bool) (string, bool) {
 	var (
 		nasm Nasm
-		var_amounts Var_Amounts
 	)
 	addf(&nasm.text_sec, "_start:\n")
 	//text_sec.WriteString("\tpush rbx; Triops: cdecl politeness\n")
 	//text_sec.WriteString("\tpush rbp; Triops: idem\n")
 
 	/* collecting all variables, concluding their offsets */
-	addf(&nasm.text_sec, "\t; Triops: Global variable intialization\n")
-
-	nasm.var_poss = make(map[string]Var_Pos)
+	addf(&nasm.text_sec, "\t; Triops: Variable intialization for %v\n", scope_path)
+	var ordered_vars [5][]What;
 	for _, this := range scope.names {
 		if this.named_thing != NAME_DECL { continue }
-		name := this.name
 		decl := all_decls[this.index]
-		bound_reg := token_txt_str(decl.bound_register, set.text)
-		/* logs its existence on the stack */
-		amount := amount_of_type(decl.typ)
 		align := align_of_type(decl.typ)
-		switch align {
-		case 1:
-			nasm.var_poss[name] = Var_Pos{0, var_amounts.vars_1B, bound_reg}
-			var_amounts.vars_1B += amount
-		case 2:
-			nasm.var_poss[name] = Var_Pos{1, var_amounts.vars_2B, bound_reg}
-			var_amounts.vars_2B += amount
-		case 4:
-			nasm.var_poss[name] = Var_Pos{2, var_amounts.vars_4B, bound_reg}
-			var_amounts.vars_4B += amount
-		case 8:
-			nasm.var_poss[name] = Var_Pos{3, var_amounts.vars_8B, bound_reg}
-			var_amounts.vars_8B += amount
-		case 16:
-			nasm.var_poss[name] = Var_Pos{4, var_amounts.vars_16B, bound_reg}
-			var_amounts.vars_16B += amount
+		ordered_vars[log2(align)] = append(ordered_vars[log2(align)], this)
+	}
+
+	nasm.var_poss = make(map[string]Var_Pos)
+	for tier := range ordered_vars {
+		nasm.stack_size += (pow2[tier] - nasm.stack_size%pow2[tier]) % pow2[tier]
+		for _, this := range ordered_vars[tier] {
+			decl := all_decls[this.index]
+			var vp Var_Pos
+			if decl.has_bound_register {
+				vp.is_on_stack = false
+				reg := all_registers[decl.bound_register]
+				vp.reg = token_txt_str(reg.token, set.text)
+			} else {
+				vp.is_on_stack = true
+				vp.index = nasm.stack_size
+				nasm.stack_size += size_of_type(decl.typ)
+			}
+			nasm.var_poss[this.name] = vp
 		}
 	}
 
-	nasm.stack_offsets[0] = 0
-	nasm.stack_offsets[1] = nasm.stack_offsets[0] + var_amounts.vars_1B
-	nasm.stack_offsets[1] += (2 - nasm.stack_offsets[1]%2) % 2
-	nasm.stack_offsets[2] = nasm.stack_offsets[1] + 2*var_amounts.vars_2B
-	nasm.stack_offsets[2] += (4 - nasm.stack_offsets[2]%4) % 4
-	nasm.stack_offsets[3] = nasm.stack_offsets[2] + 4*var_amounts.vars_4B
-	nasm.stack_offsets[3] += (8 - nasm.stack_offsets[3]%8) % 8
-	nasm.stack_offsets[4] = nasm.stack_offsets[3] + 8*var_amounts.vars_8B
-	nasm.stack_offsets[4] += (16 - nasm.stack_offsets[4]%16) % 16
-	nasm.stack_offsets[5] = nasm.stack_offsets[4] + 16*var_amounts.vars_16B
-	nasm.stack_offsets[5] += (16 - nasm.stack_offsets[5]%16) % 16 /* aligns the top to 16B */
-	// fmt.Println(nasm.var_poss)
-	// fmt.Println(var_amounts)
-	// fmt.Println(nasm.stack_offsets)
-	addf(&nasm.text_sec, "\tsub rsp, %v; Triops: This is the size of all variables on the stack\n", nasm.stack_offsets[5])
+	addf(&nasm.text_sec, "\tsub rsp, %v; Triops: This is the size of all variables on the stack\n", nasm.stack_size)
 
-	for _, this := range scope.names {
-		if this.named_thing != NAME_DECL { continue }
-		gen_init_decl(&nasm, all_decls[this.index], this.name)
+	for tier := range ordered_vars {
+		for _, this := range ordered_vars[tier] {
+			gen_init_decl(&nasm, all_decls[this.index], this.name)
+		}
 	}
 
 	addf(&nasm.text_sec, "\n\t; Triops: User code\n")
-	for _, instruction := range scope.assembly.instructions {
-		addf(&nasm.text_sec, "\t")
-		switch instruction.mnemonic.tag {
-			case DIRECTIVE_LBL:
-			addf(&nasm.text_sec, "\n\t%v.%v:\n", scope_path, token_txt_str(instruction.args[0].verbatim, set.text))
-			continue
 
-			case DIRECTIVE_REG:
-			varname := token_txt_str(instruction.args[0].verbatim, set.text)
-			regname := token_txt_str(instruction.args[1].verbatim, set.text)
-			addf(&nasm.text_sec, "; Triops: binding %v\n", varname)
-			pos, exists := nasm.var_poss[varname]
-			if !exists {
-				fmt.Println(varname)
-				panic("codegen: There was an unrecognized variable all the way in codegen")
-			}
-			offset := nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index
-			addf(&nasm.text_sec, "\tmov %v, %v [rsp + %v]\n\n", regname, indexing_word(instruction.alignment), offset)
+	for link_nr := 0; link_nr < len(scope.code); link_nr += 1 {
+		link := scope.code[link_nr]
+		if link.kind != LKIND_SEMICOLON { continue }
+
+		mnm_nr := link.right
+		mnm_node := all_nodes[mnm_nr]
+		if mnm_node.kind == NKIND_LABEL {
+			addf(&nasm.text_sec, "\t%v.%v:\n", scope_path, token_txt_str(mnm_node.token, set.text));
 			continue
 		}
+		addf(&nasm.text_sec, "\t%v", token_txt_str(mnm_node.token, set.text));
 
-		nasm.text_sec.WriteString(token_txt_str(instruction.mnemonic, set.text))
-		for arg_nr, arg := range instruction.args {
-			has_verbatim := arg.verbatim.pos != 0
-			has_immediate := arg.immediate.len != 0
-			//is_register := DIRECTIVE_REGS_START < arg.verbatim.tag && arg.verbatim.tag < DIRECTIVE_REGS_END
-			if !has_verbatim && !has_immediate {
-				break
-			}
+		for arg_nr := range mnm_node.satisfied_right {
 			if arg_nr != 0 { addf(&nasm.text_sec, ",") }
 
-			/* TODO: differentiate between registers, labels and variables in the 'verbatim' catagory
-			   Also, we might want to check if a register is rsp, and warn once for that. We can do that
-			   in the backend, but not in the frontend.*/
-//			offset := 0
-			verbatim_str := token_txt_str(arg.verbatim, set.text)
-			if has_verbatim && arg.verbatim.tag == NONE {
-				pos, exists := nasm.var_poss[verbatim_str]
-				if !exists {
-					fmt.Println(verbatim_str, arg.verbatim.tag)
-					panic("codegen: There was an unrecognized variable all the way in codegen")
-				}
-				if pos.reg != "" {
-					verbatim_str = pos.reg
-				} else {
-					verbatim_str = fmt.Sprintf("rsp + %v", nasm.stack_offsets[pos.l2_alignment] + l2_to_align[pos.l2_alignment]*pos.index)
+			link_nr += 1
+			for ; link_nr < len(scope.code); link_nr += 1 {
+				link = scope.code[link_nr]
+				if link.kind == LKIND_RIGHT_ARG {
+					break
 				}
 			}
-
-			if has_verbatim && has_immediate {
-				v, _ := value_to_integer(arg.immediate)
-				addf(&nasm.text_sec, " %v [%v + %v]", indexing_word(instruction.alignment), verbatim_str, v*instruction.alignment)
-			} else if has_verbatim && !has_immediate {
-				if arg.verbatim.tag == DIRECTIVE_LBL {
-					addf(&nasm.text_sec, " %v.%v", scope_path, verbatim_str)
-				} else {
-					addf(&nasm.text_sec, " %v", verbatim_str)
-				}
-			} else if !has_verbatim && has_immediate {
-				v, _ := value_to_integer(arg.immediate)
-				addf(&nasm.text_sec, " %v", v)
+			arg_index := link.right
+			arg_node := all_nodes[arg_index]
+			do_offset := false
+			var (
+				alignment int
+				source string
+				offset int
+			)
+			for ; arg_node.kind == NKIND_INDEX; {
+				alignment = align_of_type(arg_node.ti)
+				v, _ := value_to_integer(arg_node.imm)
+				offset += alignment*v
+				do_offset = true
+				arg_index -= 1
+				arg_node = all_nodes[arg_index]
+			}
+			node_string := token_txt_str(arg_node.token, set.text)
+			switch arg_node.kind {
+				case NKIND_IMMEDIATE:
+					v, _ := value_to_integer(arg_node.imm)
+					addf(&nasm.text_sec, " %v", v)
+				case NKIND_INDEX: panic("Should be taken care of")
+				case NKIND_VARIABLE:
+					var_pos := nasm.var_poss[node_string]
+					alignment = align_of_type(arg_node.ti)
+					source = "rsp"
+					offset += var_pos.index
+					do_offset = true
+				case NKIND_REGISTER:
+					addf(&nasm.text_sec, " %v", node_string);
+				case NKIND_LABEL:
+					addf(&nasm.text_sec, " %v.%v", scope_path, node_string)
+			}
+			if do_offset {
+				addf(&nasm.text_sec, " %v [%v + %v]", indexing_word(alignment), source, offset);
 			}
 		}
 		addf(&nasm.text_sec, "\n")
 	}
+
 	addf(&nasm.text_sec, "\n\t; Triops: leaving the stack as I found it\n")
-	addf(&nasm.text_sec, "\tadd rsp, %v; Triops: This was the size of all variables on the stack\n", nasm.stack_offsets[5])
+	addf(&nasm.text_sec, "\tadd rsp, %v; Triops: This was the size of all variables on the stack\n", nasm.stack_size)
 	/* TODO: think of linking options or just program options that change the behaviour of exiting code */
 	addf(&nasm.text_sec, "\n\t; Triops: Adding the unix exit, in case the user doesn't add one\n")
 	addf(&nasm.text_sec, "\tmov rax, 60; Triops: 60 is exit\n")
@@ -168,14 +143,18 @@ func generate_assembly(scope *Scope, set *Token_Set, scope_path string, make_sma
 
 func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 	var_pos := nasm.var_poss[name]
-	stack_pos := nasm.stack_offsets[var_pos.l2_alignment] + l2_to_align[var_pos.l2_alignment]*var_pos.index
+
 	addf(&nasm.text_sec, "\n\t; Triops: init `%v`\n", name)
 	if decl.init.len == 0 {
+		if !var_pos.is_on_stack {
+			addf(&nasm.text_sec, "\tmov %v, 0; Triops: zero init\n", var_pos.reg)
+			return
+		}
 		type_align := align_of_type(decl.typ)
 		index_word := indexing_word(type_align)
 		amount := amount_of_type(decl.typ)
 		for i := range amount {
-			addf(&nasm.text_sec, "\tmov %v [rsp + %v], 0; Triops: zero init\n", index_word, stack_pos + i*type_align)
+			addf(&nasm.text_sec, "\tmov %v [rsp + %v], 0; Triops: zero init\n", index_word, var_pos.index + i*type_align)
 		}
 		return
 	}
@@ -191,18 +170,26 @@ func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 		case TYPE_ERR: panic("codegen: internal type error")
 		case TYPE_BARE:
 			/* make assignment like normal */
-			type_align := align_of_type(decl.typ)
-			index_word := indexing_word(type_align)
 			ival := decl.init
-			ival.len = type_align
-			for i := range bare_types[ti_i].amount {
+			if !var_pos.is_on_stack {
+				ival.len = size_of_type(decl.typ)
 				integer, _ := value_to_integer(ival)
-				addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", index_word, stack_pos + i*type_align, integer)
-				ival.pos += type_align
+				addf(&nasm.text_sec, "\tmov %v, %v; Triops: zero init\n", var_pos.reg, integer)
+				return
+			} else {
+				type_align := align_of_type(decl.typ)
+				index_word := indexing_word(type_align)
+				ival.len = type_align
+				for i := range bare_types[ti_i].amount {
+					integer, _ := value_to_integer(ival)
+					addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", index_word, var_pos.index + i*type_align, integer)
+					ival.pos += type_align
+				}
 			}
 		case TYPE_INDIRECT: /* already dealt with before this switch */
 		case TYPE_RT_ARRAY:
 			/* put stuff in data section, which itself might need initialization, so, yipiee */
+			if !var_pos.is_on_stack { panic("Someone managed to fit an array into a register") }
 //			array_data := rt_array_types[ti_i]
 			below_ti := follow_type(ti)
 			ti_i, ti_t = unpack_ti(below_ti)
@@ -216,8 +203,8 @@ func gen_init_decl(nasm *Nasm, decl Decl_Des, name string) {
 			ledger[0] = Nested_Array_Ledge{ 0, 0, 0 }
 			recurse_gen_init_decl(&nasm.data_sec, label_name, ti, 0, &data_sec_offset, &decl_init_copy, &ledger)
 
-			addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v + %v\n", indexing_word(align_of_type(ti)), stack_pos, label_name, ledger[1].offset)
-			addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", indexing_word(8), stack_pos + 8, ledger[1].element_amount)
+			addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v + %v\n", indexing_word(align_of_type(ti)), var_pos.index, label_name, ledger[1].offset)
+			addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", indexing_word(8), var_pos.index + 8, ledger[1].element_amount)
 			// addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v + %v\n", indexing_word(align_of_type(ti)), stack_pos, label_name, data_sec_offset)
 			// addf(&nasm.text_sec, "\tmov %v [rsp + %v], %v\n", indexing_word(8), stack_pos + 8, data_size)
 		case TYPE_ST_ARRAY: panic("codegen: static array")
@@ -410,4 +397,17 @@ program_header:
 		addf(&full_file, "filesize equ $ - $$; Triops: This is for the custom ELF header.\n")
 	}
 	return full_file.String()
+}
+
+var pow2 = [5]int{1, 2, 4, 8, 16}
+
+func log2(align int) int {
+	switch align {
+	case  1: return 0
+	case  2: return 1
+	case  4: return 2
+	case  8: return 3
+	case 16: return 4
+	}
+	panic("log2: was only expecting normal numbers")
 }

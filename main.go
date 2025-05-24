@@ -17,6 +17,7 @@ const triops_help_message = `A lower level assembly macro programming language
         Options:
         -small  # Package the executable to be small
         -run    # Run the executable after compiling
+        -check  # Only check, don't try to build
 
 `
 
@@ -30,6 +31,7 @@ func main() {
 	generate_executable := true
 	output_provided := false
 	run_executable := false
+	only_check := false
 
 	input_filename := os.Args[1]
 	output_filename := input_filename
@@ -38,9 +40,11 @@ func main() {
 			if arg == "-small" {
 				make_small_exe = true
 				continue
-			}
-			if arg == "-run" {
+			} else if arg == "-run" {
 				run_executable = true
+				continue
+			} else if arg == "-check" {
+				only_check = true
 				continue
 			}
 			if output_provided {
@@ -238,6 +242,10 @@ func main() {
 		fmt.Printf("Amount of errors: %v\n", error_count)
 		os.Exit(1)
 	}
+	
+	if only_check {
+		return
+	}
 
 	full_asm, _ := generate_assembly(&global_scope, &set, "entry", make_small_exe)
 
@@ -250,24 +258,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	/* TODO: properly catch the outputs of these programs cus it does not appear to be happening rn */
 	var program_output strings.Builder
 	if generate_executable && make_small_exe {
 		cmd := exec.Command("nasm", "-f", "bin", "-o", output_filename, nasm_filename)
 		cmd.Stdout = &program_output
+		fmt.Print(program_output.String())
 		err := cmd.Run()
 		if err != nil {
 			fmt.Printf("Triops: nasm error `%v`:\n", err)
-			fmt.Print(program_output.String())
 			os.Exit(1)
 		}
 		os.Remove(nasm_filename)
 
 		cmd = exec.Command("chmod", "+x", output_filename)
+		fmt.Print(program_output.String())
 		cmd.Stdout = &program_output
 		err = cmd.Run()
 		if err != nil {
 			fmt.Printf("Triops: chmod error `%v`:\n", err)
-			fmt.Print(program_output.String())
 			os.Remove(output_filename)
 			os.Exit(1)
 		}
@@ -278,9 +287,9 @@ func main() {
 		cmd := exec.Command("nasm", "-f", "elf64", "-o", object_filename, nasm_filename)
 		cmd.Stdout = &program_output
 		err := cmd.Run()
+		fmt.Print(program_output.String())
 		if err != nil {
 			fmt.Printf("Triops: nasm error `%v`:\n", err)
-			fmt.Print(program_output.String())
 			os.Exit(1)
 		}
 		os.Remove(nasm_filename)
@@ -288,10 +297,10 @@ func main() {
 		cmd = exec.Command("ld", "-o", output_filename, object_filename)
 		cmd.Stdout = &program_output
 		err = cmd.Run()
+		fmt.Print(program_output.String())
 		os.Remove(object_filename)
 		if err != nil {
 			fmt.Printf("Triops: ld error `%v`:\n", err)
-			fmt.Print(program_output.String())
 			os.Exit(1)
 		}
 	}

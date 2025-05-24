@@ -1,7 +1,15 @@
+type s16 is 2 bytes;
+type s32 is 4 bytes;
 type char is 1 bytes;
 type int is 8 bytes;
 
 char[] greeting = "Hi there!\n";
+
+char A = 1;
+s16 B = 2;
+char C = 3;
+char D = 4;
+s32 E = 12;
 
 enum int syscalls {write = 1, exit = 60};
 enum int streams { in, out, err };
@@ -25,4 +33,8 @@ entry {
 	mov system_function, syscalls.exit;
 	mov error_code, 0;
 	syscall;
+
+	#lbl thing;
+	db 100, 100, 100, 100, 100;
+
 }

@@ -6,19 +6,15 @@ char[] greeting = "Hi there!\n";
 enum int syscalls {write = 1, exit = 60};
 enum int streams { in, out, err };
 
-(int errorcode) (int stream) write (char[0] data, int length) {
-	#reg data = rsi;
-	#reg length = rdx;
-	#reg stream = rdi;
-	mov #rq rax, syscalls.write;
-	syscall;
-	mov errorcode, #rq rax;
+(register rax is int errorcode) (register rdi is int stream) write (register rsi is char[0] data, register rdx is int length) {
+	asm {
+		mov rax, syscalls.write;
+		syscall;
+	}
 }
 
-(int c) (int a) + (int b) prec 10 asm {
-	#reg a = rax;
+(register rax is int c) (rax a) + (register rbx is int b) prec 10 asm {
 	add a, b;
-	mov c, a;
 }
 
 int h;

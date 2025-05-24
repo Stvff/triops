@@ -2,8 +2,8 @@
 Today I want done:
 1. [x] New asm parsing
 2. [x] Implement register typesystem
-2. [ ] New asm codegen
-3. [ ] Think really hard about expression codegen
+2. [x] New asm codegen
+3. [-] Think really hard about expression codegen
 4. [ ] Finalize calling convention
 5. [ ] Figure out how I want conditionals to look (related to labels in inline blocks)
 6. [ ] Optional: initialization for static arrays
